@@ -2,12 +2,25 @@
 @section('page-title')
     {{ __('Manage Items') }}
 @endsection
+@section('title')
+    {{ __('Items') }}
+@endsection
 @section('page-breadcrumb')
     {{ __('Items') }}
 @endsection
 @section('page-action')
     <div class="d-flex">
         @stack('addButtonHook')
+        @permission('product&service import')
+            <a href="#" class="btn btn-sm btn-primary me-2" data-ajax-popup="true"
+                data-title="{{ __('Product & Service Import') }}" data-url="{{ route('product-service.file.import') }}"
+                data-toggle="tooltip" title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
+            </a>
+        @endpermission
+        <a href="{{ route('product-service.index') }}" class="btn btn-sm btn-primary btn-icon me-2" data-bs-toggle="tooltip"
+            title="{{ __('List View') }}">
+            <i class="ti ti-list text-white"></i>
+        </a>
         <a href="{{ route('category.index') }}"data-size="md" class="btn btn-sm btn-primary me-2"
             data-bs-toggle="tooltip"data-title="{{ __('Setup') }}" title="{{ __('Setup') }}"><i
                 class="ti ti-settings"></i></a>
@@ -15,18 +28,6 @@
         <a href="{{ route('productstock.index') }}"data-size="md" class="btn btn-sm btn-primary me-2"
             data-bs-toggle="tooltip"data-title="{{ __(' Product Stock') }}" title="{{ __('Product Stock') }}"><i
                 class="ti ti-shopping-cart"></i></a>
-
-        @permission('product&service import')
-            <a href="#" class="btn btn-sm btn-primary me-2" data-ajax-popup="true"
-                data-title="{{ __('Product & Service Import') }}" data-url="{{ route('product-service.file.import') }}"
-                data-toggle="tooltip" title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
-            </a>
-        @endpermission
-
-        <a href="{{ route('product-service.index') }}" class="btn btn-sm btn-primary btn-icon me-2" data-bs-toggle="tooltip"
-            title="{{ __('List View') }}">
-            <i class="ti ti-list text-white"></i>
-        </a>
 
         @permission('product&service create')
             <a href="{{ route('product-service.create') }}" class="btn btn-sm btn-primary btn-icon" data-bs-toggle="tooltip"
@@ -51,14 +52,14 @@
                                     <div class="col-xl-6 col-lg-3 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box">
                                             {{ Form::label('item_type', __('Item'), ['class' => 'form-label']) }}
-                                            {{ Form::select('item_type', $product_type, isset($_GET['item_type']) ? $_GET['item_type'] : '', ['class' => 'form-control ', 'placeholder' => __('Select Item Type')]) }}
+                                            {{ Form::select('item_type', $product_type, isset($_GET['item_type']) ? $_GET['item_type'] : '', ['class' => 'form-control ', 'placeholder' => 'Select Item Type']) }}
                                         </div>
                                     </div>
 
                                     <div class="col-xl-6 col-lg-3 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box">
                                             {{ Form::label('category', __('Category'), ['class' => 'form-label']) }}
-                                            {{ Form::select('category', $category, isset($_GET['category']) ? $_GET['category'] : '', ['class' => 'form-control ', 'placeholder' => __('Select Category')]) }}
+                                            {{ Form::select('category', $category, isset($_GET['category']) ? $_GET['category'] : '', ['class' => 'form-control ', 'placeholder' => 'Select Category']) }}
                                         </div>
                                     </div>
                                 </div>
@@ -119,7 +120,7 @@
                                             <i class="feather icon-more-vertical"></i>
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-end">
-                                            @permission('product&service show')
+                                            @permission('product&service edit')
                                                 <a class="dropdown-item"
                                                     href="{{ route('product-service.show', $productService->id) }}">
                                                     <i class="ti ti-eye me-1"></i> <span>{{ __('View') }}</span>
@@ -153,7 +154,7 @@
                             <div class="card-body p-3">
                                 <div class="row g-2 justify-content-between">
                                     <div class="col-auto"><span
-                                            class="badge bg-success">{{ optional($productService->categorys)->name ?? '' }}</span>
+                                            class="badge rounded-pill bg-success">{{ optional($productService->categorys)->name ?? '' }}</span>
                                     </div>
                                     <div class="col-auto">
                                         <p class="mb-0"class="text-center">{{ $productService->sku }}</p>

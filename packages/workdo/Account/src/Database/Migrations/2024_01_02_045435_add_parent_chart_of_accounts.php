@@ -13,7 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('chart_of_accounts') && !Schema::hasColumn('chart_of_accounts', 'parent'))
+        Schema::table('chart_of_accounts', function (Blueprint $table) {
+
+        });
+
+        if (!Schema::hasColumn('chart_of_accounts', 'parent'))
         {
             Schema::table('chart_of_accounts', function (Blueprint $table) {
                 $table->integer('parent')->default(0)->after('sub_type');

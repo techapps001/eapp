@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('invoice_products') && !Schema::hasColumn('invoice_products', 'product_name')) {
-            Schema::table('invoice_products', function (Blueprint $table) {
+        Schema::table('invoice_products', function (Blueprint $table) {
+            if (!Schema::hasColumn('invoice_products', 'product_name')) {
                 $table->string('product_name')->nullable()->default(null);
-            });
-        }
+            }
+        });
     }
 
     /**

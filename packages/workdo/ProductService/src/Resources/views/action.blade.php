@@ -1,4 +1,4 @@
-@permission('product&service show')
+@permission('product&service edit')
     <div class="action-btn me-2">
         <a class="mx-3 btn btn-sm align-items-center bg-warning" href="{{ route('product-service.show', $productService->id) }}"
             data-size="md" data-bs-toggle="tooltip" title="{{ __('View') }}">

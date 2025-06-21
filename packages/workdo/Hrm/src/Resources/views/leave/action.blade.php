@@ -36,8 +36,8 @@
     </div>
     @if ($leave->status == 'Pending')
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" name="status" value="Approved">{{ __('Approved') }}</button>
-            <button type="submit" class="btn btn-danger" data-bs-dismiss="modal" name="status" value="Reject">{{ __('Reject') }}</button>
+            <input type="submit" value="{{ __('Approved') }}" class="btn btn-primary" name="status">
+            <input type="submit" value="{{ __('Reject') }}" class="btn btn-danger" name="status">
         </div>
     @endif
     {{ Form::close() }}

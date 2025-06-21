@@ -7,8 +7,8 @@
                         <table class="table mb-0 pc-dt-simple" id="vendor_purchase">
                             <thead>
                                 <tr>
-                                    <th>{{__('Purchase')}}</th>
-                                    <th>{{__('Purchase Date')}}</th>
+                                    <th>{{__('Vendor')}}</th>
+                                    <th>{{__('Vendor Date')}}</th>
                                     <th>{{__('Due Amount')}}</th>
                                     <th>{{__('Status')}}</th>
                                     @if(Laratrust::hasPermission('purchase edit') || Laratrust::hasPermission('purchase delete') || Laratrust::hasPermission('purchase show'))
@@ -17,7 +17,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse(App\Models\Purchase::vendorPurchase($vendor->id) as $purchase)
+                            @forelse (App\Models\Purchase::vendorPurchase($vendor->user_id) as $purchase)
                                 <tr class="font-style">
                                     <td class="Id">
                                         @permission('purchase show')

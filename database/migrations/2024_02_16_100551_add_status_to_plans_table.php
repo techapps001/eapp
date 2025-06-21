@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('plans') && !Schema::hasColumn('plans', 'status')) {
-            Schema::table('plans', function (Blueprint $table) {
+        Schema::table('plans', function (Blueprint $table) {
+            if (!Schema::hasColumn('plans', 'status')) {
                 $table->integer('status')->default(1)->nullable()->after('is_free_plan');
-            });
-        }
+            }
+        });
     }
 
     /**

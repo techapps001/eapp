@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('work_spaces') && !Schema::hasColumn('work_spaces', 'enable_domain')) {
-            Schema::table('work_spaces', function (Blueprint $table) {
+        Schema::table('work_spaces', function (Blueprint $table) {
+            if (!Schema::hasColumn('work_spaces', 'enable_domain')) {
                 $table->string('enable_domain')->nullable()->after('name');
                 $table->string('domain_type')->nullable()->after('enable_domain');
                 $table->string('domain')->nullable()->after('domain_type');
                 $table->string('subdomain')->nullable()->after('domain');
-            });
-        }
+            }
+        });
     }
 
     /**

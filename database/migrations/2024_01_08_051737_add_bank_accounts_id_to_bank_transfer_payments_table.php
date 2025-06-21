@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
 
-        if (Schema::hasTable('bank_transfer_payments') && !Schema::hasColumn('bank_transfer_payments', 'bank_accounts_id')) {
-            Schema::table('bank_transfer_payments', function (Blueprint $table) {
+        Schema::table('bank_transfer_payments', function (Blueprint $table) {
+            if (!Schema::hasColumn('bank_transfer_payments', 'bank_accounts_id')) {
                 $table->string('bank_accounts_id')->after('payment_type')->default('0');
-            });
-        }
+            }
+        });
     }
 
     /**

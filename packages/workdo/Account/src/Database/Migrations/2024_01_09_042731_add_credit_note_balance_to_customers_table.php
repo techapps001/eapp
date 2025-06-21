@@ -13,11 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('customers') && !Schema::hasColumn('customers', 'credit_note_balance')) {
-            Schema::table('customers', function (Blueprint $table) {
+        Schema::table('customers', function (Blueprint $table) {
+            if (!Schema::hasColumn('customers', 'credit_note_balance')) {
                 $table->string('credit_note_balance')->after('balance')->default('0.00');
-            });
-        }
+            }
+        });
+
+
     }
 
     /**

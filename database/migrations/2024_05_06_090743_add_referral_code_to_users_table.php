@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('users') && !Schema::hasColumn('users', 'referral_code')) {
+        if (!Schema::hasColumn('users', 'referral_code')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->integer('referral_code')->default(0)->after('total_workspace');
                 $table->integer('used_referral_code')->default(0)->after('referral_code');

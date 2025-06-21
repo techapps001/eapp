@@ -321,7 +321,7 @@ class LanguageController extends Controller
                 }
                 $jsonFile = $dir . "/" . $lang . ".json";
 
-                file_put_contents($jsonFile, json_encode($request->label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                file_put_contents($jsonFile, json_encode($request->label));
 
                 $langFolder = $dir . "/" . $lang;
                 if(!is_dir($langFolder))

@@ -425,25 +425,15 @@ class CustomerController extends Controller
     {
         if(\Auth::user()->isAbleTo('customer manage'))
         {
-            if(Auth::user()->type == 'company')
-            {
-                $customers = User::where('workspace_id',getActiveWorkSpace())
-                            ->leftjoin('customers', 'users.id', '=', 'customers.user_id')
-                            ->where('users.type', 'Client')
-                            ->select('users.*','customers.*', 'users.name as name', 'users.email as email', 'users.id as id');
-            }
-            else{
-                $customers =  User::where('workspace_id', getActiveWorkSpace())->where('users.id',Auth::user()->id)
-                              ->leftjoin('customers', 'users.id', '=', 'customers.user_id')
-                              ->where('users.type', 'Client')
-                              ->select('users.*', 'customers.*', 'users.name as name', 'users.email as email', 'users.id as id', 'users.mobile_no as contact', 'customers.balance');
-            }
-            $customers = $customers->paginate(11);
+            $customers = User::where('workspace_id',getActiveWorkSpace())
+                        ->leftjoin('customers', 'users.id', '=', 'customers.user_id')
+                        ->where('users.type', 'Client')
+                        ->select('users.*','customers.*', 'users.name as name', 'users.email as email', 'users.id as id');
+                        $customers = $customers->paginate(11);
             return view('account::customer.grid', compact('customers'));
         }
         else
         {
-            
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }

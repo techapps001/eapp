@@ -140,7 +140,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($accounts as $key => $account)
+                                    @foreach ($accounts as $account)
                                         @php
                                             $balance = 0;
                                             $totalDebit   = 0;
@@ -184,31 +184,22 @@
                                                     @include('double-entry::setting.add_button',['account_id'=> $account->id])
                                                 @endif
 
-                                                
-                                                @if($account->name != 'Accounts Receivable' && $account->name != 'Accounts Payable')
-                                                    @permission('chartofaccount edit')
-                                                        <div class="action-btn me-2">
-                                                            <a href="#" class="bg-info mx-3 btn btn-sm align-items-center" data-url="{{ route('chart-of-account.edit',$account->id) }}" data-ajax-popup="true" data-title="{{__('Edit Account')}}" data-bs-toggle="tooltip" title="{{__('Edit')}}" data-original-title="{{__('Edit')}}">
-                                                                <i class="ti ti-pencil text-white"></i>
-                                                            </a>
-                                                        </div>
-                                                    @endpermission
-                                                    @permission('chartofaccount delete')
-                                                        <div class="action-btn">
-                                                            {!! Form::open(['method' => 'DELETE', 'route' => ['chart-of-account.destroy', $account->id]]) !!}
-                                                            <a href="#!" class=" bg-danger btn btn-sm align-items-center text-white show_confirm" data-bs-toggle="tooltip" title='Delete'>
-                                                                <i class="ti ti-trash"></i>
-                                                            </a>
-                                                            {!! Form::close() !!}
-                                                        </div>
-                                                    @endpermission
-                                                @else
+                                                @permission('chartofaccount edit')
                                                     <div class="action-btn me-2">
-                                                            <a href="#" class="bg-black mx-3 btn btn-sm align-items-center">
-                                                                <i class="ti ti-lock text-white"></i>
-                                                            </a>
+                                                        <a href="#" class="bg-info mx-3 btn btn-sm align-items-center" data-url="{{ route('chart-of-account.edit',$account->id) }}" data-ajax-popup="true" data-title="{{__('Edit Account')}}" data-bs-toggle="tooltip" title="{{__('Edit')}}" data-original-title="{{__('Edit')}}">
+                                                            <i class="ti ti-pencil text-white"></i>
+                                                        </a>
                                                     </div>
-                                                @endif                                                
+                                                @endpermission
+                                                @permission('chartofaccount delete')
+                                                    <div class="action-btn">
+                                                        {!! Form::open(['method' => 'DELETE', 'route' => ['chart-of-account.destroy', $account->id]]) !!}
+                                                        <a href="#!" class=" bg-danger btn btn-sm align-items-center text-white show_confirm" data-bs-toggle="tooltip" title='Delete'>
+                                                            <i class="ti ti-trash"></i>
+                                                        </a>
+                                                        {!! Form::close() !!}
+                                                    </div>
+                                                @endpermission
                                             </td>
                                         </tr>
                                     @endforeach

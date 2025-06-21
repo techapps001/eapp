@@ -102,7 +102,7 @@ class SuperAdminSettingMenuListener
             'permission' => 'setting storage manage'
         ]);
         $menu->add([
-            'title' => __('ChatGPT Key Settings'),
+            'title' => __('Chat GPT Key Settings'),
             'name' => 'chat-gpt-settings',
             'order' => 80  ,
             'ignore_if' => [],

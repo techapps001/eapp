@@ -41,25 +41,3 @@
         </div>
     </div>
 @endsection
-
-@push('scripts')
-<script>
-    $(document).on('click' , '#item' , function(){
-        var item_id = $(this).val();
-        $.ajax({
-            url: "{{route('credit-invoice.itemprice')}}",
-            method:'POST',
-            data: {
-                "item_id": item_id, 
-                "_token": "{{ csrf_token() }}",
-            },
-            success: function (data) {
-                if (data !== undefined) {
-                    $('#amount').val(data);
-                    $('input[name="amount"]').attr('min', 0);
-                }
-            }
-        });        
-    });
-</script>
-@endpush

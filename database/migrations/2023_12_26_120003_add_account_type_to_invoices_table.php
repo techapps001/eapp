@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('invoices') && !Schema::hasColumn('invoices', 'account_type')) {
-            Schema::table('invoices', function (Blueprint $table) {
-                $table->string('account_type')->after('user_id')->default('Accounting');
-            });
-        }
+        Schema::table('invoices', function (Blueprint $table) {
+                if (!Schema::hasColumn('invoices', 'account_type')) {
+                    $table->string('account_type')->after('user_id')->default('Accounting');
+                }
+        });
     }
 
     /**

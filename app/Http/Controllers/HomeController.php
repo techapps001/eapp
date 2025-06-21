@@ -258,7 +258,7 @@ class HomeController extends Controller
         if ($query) {
             $modules = array_filter($modules, function ($module) use ($query) {
                 // You may need to adjust this condition based on your requirements
-                return stripos($module->alias, $query) !== false;
+                return stripos($module->name, $query) !== false;
             });
         }
         // Rest of your code

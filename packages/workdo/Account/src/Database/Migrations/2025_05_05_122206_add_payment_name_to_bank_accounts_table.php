@@ -13,10 +13,11 @@ return new class extends Migration
     {
         if (Schema::hasTable('bank_accounts') && !Schema::hasColumn('bank_accounts', 'payment_name')) {
             Schema::table('bank_accounts', function (Blueprint $table) {
+
                 $table->string('payment_name')->after('bank_address')->nullable();
             });
         }
-
+        
         Schema::table('bank_accounts', function (Blueprint $table) {
             //
         });

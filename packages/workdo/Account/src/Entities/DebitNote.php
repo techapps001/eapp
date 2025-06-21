@@ -11,7 +11,6 @@ class DebitNote extends Model
 
     protected $fillable = [
         'bill',
-        'debit_note',
         'vendor',
         'amount',
         'date',
@@ -21,10 +20,5 @@ class DebitNote extends Model
     public function vendor_name()
     {
         return $this->hasOne(Vender::class, 'id', 'vendor');
-    }
-
-    public function debitNote()
-    {
-        return $this->hasOne(CustomerDebitNotes::class, 'id', 'debit_note');
     }
 }

@@ -23,7 +23,7 @@ class PurchaseDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rowColumn = ['purchase_id','vender_id','category_id','purchase_date','status','total_amount'];
+        $rowColumn = ['purchase_id','vender_id','category_id','purchase_date','status'];
         $dataTable = (new EloquentDataTable($query))
         ->addIndexColumn()
         ->editColumn('purchase_id',function(Purchase $purchase){
@@ -54,9 +54,6 @@ class PurchaseDataTable extends DataTable
         })
         ->editColumn('purchase_date',function(Purchase $purchase){
             return company_date_formate($purchase->purchase_date);
-        })
-        ->addColumn('total_amount', function (Purchase $purchase) {
-            return currency_format_with_sym($purchase->getTotal());
         })
         ->filterColumn('status', function ($query, $keyword) {
             if (stripos('Draft', $keyword) !== false) {
@@ -128,7 +125,7 @@ class PurchaseDataTable extends DataTable
         } else {
             $query = $model->newQuery()
             ->select('purchases.*', 'vendors.name as vendor_name')
-            ->join('vendors', 'purchases.vender_id', '=', 'vendors.id')
+            ->join('vendors', 'purchases.vender_id', '=', 'vendors.user_id')
             ->where('purchases.status', '!=', 0)
             ->where('vendors.user_id', Auth::user()->id)
             ->where('purchases.workspace', getActiveWorkSpace());
@@ -256,7 +253,6 @@ class PurchaseDataTable extends DataTable
             Column::make('vender_id')->title(__('Vendor')),
             Column::make('account_type')->title(__('Account Type')),
             Column::make('category_id')->title(__('Category')),
-            Column::computed('total_amount')->title(__('Total Amount')),
             Column::make('purchase_date')->title(__('Purchase Date')),
             Column::make('status')->title(__('Status')),
         ];

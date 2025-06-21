@@ -8,16 +8,11 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Workdo\Account\Entities\CustomerCreditNotes;
 use App\Models\Invoice;
-use App\Models\InvoiceProduct;
 use App\Models\User;
 use Workdo\Account\DataTables\CreditNoteDataTable;
 use Workdo\Account\Entities\AccountUtility;
 use Workdo\Account\Entities\Customer;
 use App\Traits\CreditDebitNoteBalance;
-use Workdo\Account\Entities\CreditNote;
-use Workdo\Account\Events\CreateCustomerCreditNote;
-use Workdo\Account\Events\DestroyCustomerCreditNote;
-use Workdo\Account\Events\UpdateCustomerCreditNote;
 
 class CustomerCreditNotesController extends Controller
 {
@@ -46,14 +41,9 @@ class CustomerCreditNotesController extends Controller
 
     public function create()
     {
-        if(Auth::user()->isAbleTo('creditnote create'))
+        if(\Auth::user()->isAbleTo('creditnote create'))
         {
-            if(Auth::user()->type == 'company') {
-                $invoices = Invoice::where('status', '!=' , 0)->where('created_by', creatorId())->where('workspace',getActiveWorkSpace())->get()->pluck('invoice_id', 'id');
-            }
-            else {
-                $invoices = Invoice::where('status', '!=' , 0)->where('user_id',Auth::user()->id)->where('created_by', creatorId())->where('workspace',getActiveWorkSpace())->get()->pluck('invoice_id', 'id');
-            }
+            $invoices = Invoice::where('created_by', creatorId())->where('workspace',getActiveWorkSpace())->get()->pluck('invoice_id', 'id');
             $statues = CustomerCreditNotes :: $statues;
             return view('account::customerCreditNote.create', compact('invoices','statues'));
         }
@@ -71,7 +61,7 @@ class CustomerCreditNotesController extends Controller
 
     public function store(Request $request)
     {
-        if(Auth::user()->isAbleTo('creditnote create'))
+        if(\Auth::user()->isAbleTo('creditnote create'))
         {
             $validator = \Validator::make(
                 $request->all(), [
@@ -100,19 +90,30 @@ class CustomerCreditNotesController extends Controller
                 {
                     return redirect()->back()->with('error', 'Maximum ' . currency_format_with_sym($invoicePaid-$customerCreditNotes) . ' credit limit of this invoice.');
                 }
-                    $credit                  = new CustomerCreditNotes();
-                    $credit->credit_id       = $this->creditNoteNumber();
-                    $credit->invoice         = $invoice_id;
-                    $credit->invoice_product = $request->invoice_product;
-                    $credit->customer        = 0;
-                    $credit->date            = $request->date;
-                    $credit->amount          = $creditAmount;
-                    $credit->status          = 0;
-                    $credit->description     = $request->description;
+                $customer = Customer::where('customer_id', '=', $invoiceDue->customer_id)->first();
+                if(empty($customer)){
+                    $customer = User::find($invoiceDue->customer_id);
+                }
+                if(!empty($customer))
+                {
+                    $credit              = new CustomerCreditNotes();
+                    $credit->invoice     = $invoice_id;
+                    $credit->customer    = $customer->id;
+                    $credit->date        = $request->date;
+                    $credit->amount      = $creditAmount;
+                    $credit->status      = $request->status;
+                    $credit->description = $request->description;
                     $credit->save();
 
-                    event(new CreateCustomerCreditNote($request , $credit));
+                    // store creditnote customer's table
+                    $this->updateBalance('customer', $customer->id, $creditAmount, 'credit');
+
                     return redirect()->route('custom-credit.note')->with('success', __('Credit Note successfully created.'));
+                }
+                else
+                {
+                    return redirect()->back()->with('error', __('User is not converted into customer.'));
+                }
             }else{
                 return redirect()->back()->with('error', __('The invoice field is required.'));
             }
@@ -130,17 +131,11 @@ class CustomerCreditNotesController extends Controller
      */
     public function edit($invoice_id, $creditNote_id)
     {
-        if(Auth::user()->isAbleTo('creditnote edit'))
+        if(\Auth::user()->isAbleTo('creditnote edit'))
         {
-            if(Auth::user()->type == 'company') {
-                $invoices = Invoice::where('created_by', creatorId())->where('workspace',getActiveWorkSpace())->get()->pluck('invoice_id', 'id');
-            }
-            else {
-                $invoices = Invoice::where('user_id',Auth::user()->id)->where('created_by', creatorId())->where('workspace',getActiveWorkSpace())->get()->pluck('invoice_id', 'id');
-            }
             $creditNote = CustomerCreditNotes::find($creditNote_id);
             $statues = CustomerCreditNotes :: $statues;
-            return view('account::customerCreditNote.edit', compact('creditNote','statues' , 'invoices'));
+            return view('account::customerCreditNote.edit', compact('creditNote','statues'));
         }
         else
         {
@@ -156,7 +151,7 @@ class CustomerCreditNotesController extends Controller
      */
     public function update(Request $request, $invoice_id, $creditNote_id)
     {
-        if(Auth::user()->isAbleTo('creditnote edit'))
+        if(\Auth::user()->isAbleTo('creditnote edit'))
         {
             $validator = \Validator::make(
                 $request->all(), [
@@ -186,12 +181,17 @@ class CustomerCreditNotesController extends Controller
                 return redirect()->back()->with('error', 'Maximum ' . currency_format_with_sym($invoicePaid - $existingCredits) . ' credit to this invoice.');
             }
 
-            $credit->invoice_product = $request->invoice_product;
-            $credit->date            = $request->date;
-            $credit->amount          = $creditAmount;
-            $credit->description     = $request->description;
+             // store creditnote customer's table
+            $this->updateBalance('customer', $invoiceDue->customer_id, $credit->amount, 'debit');
+
+            $credit->date        = $request->date;
+            $credit->amount      = $creditAmount;
+            $credit->status      = $request->status;
+            $credit->description = $request->description;
             $credit->save();
-            event(new UpdateCustomerCreditNote($request , $credit));
+
+            // store creditnote customer's table
+            $this->updateBalance('customer', $invoiceDue->customer_id, $creditAmount, 'credit');
 
             return redirect()->back()->with('success', __('The credit note details are updated successfully.'));
         }
@@ -204,78 +204,20 @@ class CustomerCreditNotesController extends Controller
 
     public function destroy($invoice_id, $creditNote_id)
     {
-        if(Auth::user()->isAbleTo('creditnote delete'))
+        if(\Auth::user()->isAbleTo('creditnote delete'))
         {
             $creditNote = CustomerCreditNotes::find($creditNote_id);
+            // store creditnote customer's table
+            $this->updateBalance('customer', $creditNote->customer, $creditNote->amount, 'debit');
 
-            if($creditNote->status == 0)
-            {
-                event(new DestroyCustomerCreditNote($creditNote));
+            $creditNote->delete();
 
-                $creditNote->delete();
+            return redirect()->back()->with('success', __('The credit note has been deleted.'));
 
-                return redirect()->back()->with('success', __('The credit note has been deleted.'));
-            }
-            else
-            {
-                $usedCreditNote = CreditNote::where('credit_note', $creditNote->id)
-                ->pluck('invoice')
-                ->unique();
-                $invoice = Invoice::whereIn('id' , $usedCreditNote)->get()->pluck('invoice_id')->toarray();
-                $formattedInvoices = array_map(function ($invoiceId) {
-                    return Invoice::invoiceNumberFormat($invoiceId);
-                }, $invoice);
-                $invoiceId = implode(' , ' ,($formattedInvoices));
-                
-                return redirect()->back()->with('error', __('This credit note is already used in invoice ') .$invoiceId. __(', so it can not deleted.'));
-            }
         }
         else
         {
             return redirect()->back()->with('error', __('Permission denied.'));
-        }
-    }
-
-    public function getItems(Request $request)
-    {
-        $invoice = Invoice::find($request->invoice_id);
-        $invoice_module = ['account','cmms' , 'rent' , 'sales' , 'mobileservice' , 'vehicleinspection' , 'machinerepair' , 'musicinstitute' , 'restaurantmenu'];
-        if(in_array($invoice->invoice_module , $invoice_module)){
-            $items = InvoiceProduct::select('invoice_products.*' , 'product_services.name as product_name')->join('product_services' ,  'product_services.id' , 'invoice_products.product_id')->where('invoice_id' , $request->invoice_id)->where('product_services.created_by',creatorId())->where('product_services.workspace_id' , getActiveWorkSpace())->get();        
-            $getDue = $invoice->getTotal() - $invoice->getDue();
-            return response()->json(['type' => 'withproduct' ,'items' => $items , 'getDue' => $getDue]);
-        }
-        else {
-            $getDue = $invoice->getTotal() - $invoice->getDue();
-            $amount = $invoice->getTotal();
-            return response()->json(['type' => 'witoutproduct' ,'amount' => $amount , 'getDue' => $getDue]);
-        }
-    }
-
-    public function getItemPrice(Request $request)
-    {
-        $invoiceProduct = InvoiceProduct::find($request->item_id);
-        $totalPrice     = 0;
-        if($invoiceProduct != null)
-        {
-            $product        = \Workdo\ProductService\Entities\ProductService::find($invoiceProduct->product_id);
-            $taxRate        = !empty($product) ? (!empty($product->tax_id) ? $product->taxRate($product->tax_id) : 0) : 0;
-            $totalTax       = ($taxRate / 100) * (($invoiceProduct->price * $invoiceProduct->quantity) - $invoiceProduct->discount);
-            $totalPrice     = (($invoiceProduct->price * $invoiceProduct->quantity) + $totalTax) - $invoiceProduct->discount;
-        }
-        
-        return response()->json($totalPrice);
-    }
-
-    function creditNoteNumber()
-    {
-        $latest = CustomerCreditNotes::whereHas('invoices', function ($query) {
-                    $query->where('workspace', getActiveWorkSpace());
-                     })->with(['custom_customer','invoices'])->latest()->first();
-        if ($latest == null) {
-            return 1;
-        } else {
-            return $latest->credit_id + 1;
         }
     }
 }

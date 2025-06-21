@@ -2,11 +2,9 @@
 
 namespace Workdo\Account\DataTables;
 
-use App\Models\Purchase;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use Workdo\Account\Entities\Bill;
 use Workdo\Account\Entities\CustomerDebitNotes;
 use Workdo\Account\Entities\DebitNote;
@@ -27,32 +25,23 @@ class DebitNoteDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rawColumn = ['debit_id', 'bill','date', 'amount','status','description'];
+        $rawColumn = [ 'bill','date', 'vendor', 'amount','status','description'];
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('debit_id', function (CustomerDebitNotes $customdebitNote) {
-                return ' <a href="#" class="btn btn-outline-primary">' . CustomerDebitNotes::debitNumberFormat($customdebitNote->debit_id) . '</a>';
-            })
             ->editColumn('bill', function (CustomerDebitNotes $customdebitNote) {
-                if($customdebitNote->type == 'bill') {
-                    if (\Laratrust::hasPermission('bill show')) {
-                        $url = route('bill.show', Crypt::encrypt($customdebitNote->bill));
-                        return '<a href="' . $url . '" class="btn btn-outline-primary">' . Bill::billNumberFormat($customdebitNote->bill_number->bill_id) . '</a>';
-                    } else {
-                        return ' <a href="#" class="btn btn-outline-primary">' . Bill::billNumberFormat($customdebitNote->bill_number->bill_id) . '</a>';
-                    }
-                }
-                else {
-                    if (\Laratrust::hasPermission('purchase show')) {
-                        $url = route('purchases.show', Crypt::encrypt($customdebitNote->bill));
-                        return '<a href="' . $url . '" class="btn btn-outline-primary">' . Purchase::purchaseNumberFormat($customdebitNote->purchase_number->purchase_id) . '</a>';
-                    } else {
-                        return ' <a href="#" class="btn btn-outline-primary">' . Purchase::purchaseNumberFormat($customdebitNote->purchase_number->purchase_id) . '</a>';
-                    }
+                if (\Laratrust::hasPermission('bill show')) {
+                    $url = route('bill.show', \Crypt::encrypt($customdebitNote->bill));
+                    return '<a href="' . $url . '" class="btn btn-outline-primary">' . Bill::billNumberFormat($customdebitNote->bill_number->bill_id) . '</a>';
+                } else {
+                    return ' <a href="#" class="btn btn-outline-primary">' . Bill::billNumberFormat($customdebitNote->bill_number->bill_id) . '</a>';
                 }
             })
             ->editColumn('date', function (CustomerDebitNotes $customdebitNote) {
                 return company_date_formate($customdebitNote->date);
+            })
+
+            ->editColumn('vendor', function (CustomerDebitNotes $customdebitNote) {
+                return !empty($customdebitNote->custom_vendor) ? $customdebitNote->custom_vendor->name : '';
             })
 
             ->editColumn('description', function (CustomerDebitNotes $customdebitNote) {
@@ -64,11 +53,11 @@ class DebitNoteDataTable extends DataTable
             })
             ->editColumn('status', function (CustomerDebitNotes $customdebitNote) {
                 if ($customdebitNote->status == 0) {
-                    $class = 'bg-warning';
+                    $class = 'bg-primary';
                 } elseif ($customdebitNote->status == 1) {
                     $class = 'bg-info';
                 } elseif ($customdebitNote->status == 2) {
-                    $class = 'bg-primary';
+                    $class = 'bg-secondary';
                 }
                 return '<span class="badge ' . $class . ' p-2 px-3">' . CustomerDebitNotes::$statues[$customdebitNote->status] . '</span>';
             })
@@ -81,6 +70,13 @@ class DebitNoteDataTable extends DataTable
                     $query->orWhere('customer_debit_notes.status', 2);
                 }
             });
+
+            $dataTable->filterColumn('vendor', function ($query, $keyword) {
+                $query->whereHas('custom_vendor', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%");
+                });
+            });
+
 
         if (\Laratrust::hasPermission('debitnote edit') || \Laratrust::hasPermission('debitnote delete')) {
             $dataTable->addColumn('action', function (CustomerDebitNotes $customdebitNote) {
@@ -95,27 +91,14 @@ class DebitNoteDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(CustomerDebitNotes $model,Request $request)
+    public function query(CustomerDebitNotes $model)
     {
-        $query = $model->with('custom_vendor')->select('customer_debit_notes.*');
 
-        if ($request->debit_type == 0) {
-            $query->join('bills', 'customer_debit_notes.bill', '=', 'bills.id')
-                ->where('customer_debit_notes.type', 'bill')
-                  ->where('bills.workspace', getActiveWorkSpace());
-            if (Auth::user()->type != 'company') {
-                $query->where('bills.user_id', Auth::user()->id);
-            }
-        } else {
-            $query->join('purchases', 'customer_debit_notes.bill', '=', 'purchases.id')
-                  ->where('customer_debit_notes.type', 'purchase')
-                  ->where('purchases.workspace', getActiveWorkSpace());
-            if (Auth::user()->type != 'company') {
-                $query->where('purchases.user_id', Auth::user()->id);
-            }
-        }
-        
-        return $query;
+        $customdebitNotes = $model->with('custom_vendor')->select('customer_debit_notes.*')
+            ->leftJoin('bills', 'customer_debit_notes.bill', '=', 'bills.id')
+            ->where('bills.workspace', getActiveWorkSpace());
+
+        return $customdebitNotes;
     }
 
     /**
@@ -126,12 +109,6 @@ class DebitNoteDataTable extends DataTable
         $dataTable = $this->builder()
             ->setTableId('debitnote-table')
             ->columns($this->getColumns())
-            ->ajax([
-                'data' => 'function(d) {
-                    var debit_type = $("select[name=debit_type]").val();
-                    d.debit_type = debit_type
-                }',
-            ])
             ->orderBy(0)
             ->language([
                 "paginate" => [
@@ -145,19 +122,6 @@ class DebitNoteDataTable extends DataTable
             ])
             ->initComplete('function() {
                 var table = this;
-                $("body").on("click", "#applyfilter", function() {
-                    if (!$("select[name=debit_type]").val()) {
-                        toastrs("Error!", "Please select Atleast One Filter ", "error");
-                        return;
-                    }
-                    $("#debitnote-table").DataTable().draw();
-                });
-
-                $("body").on("click", "#clearfilter", function() {
-                    $("select[name=debit_type]").val("0")
-                    $("#debitnote-table").DataTable().draw();
-                });
-
                 var searchInput = $(\'#\'+table.api().table().container().id+\' label input[type="search"]\');
                 searchInput.removeClass(\'form-control form-control-sm\');
                 searchInput.addClass(\'dataTable-input\');
@@ -252,8 +216,8 @@ class DebitNoteDataTable extends DataTable
         $column = [
             Column::make('id')->searchable(false)->visible(false)->exportable(false)->printable(false),
             Column::make('No')->title(__('No'))->data('DT_RowIndex')->name('DT_RowIndex')->searchable(false)->orderable(false),
-            Column::make('debit_id')->title(__('Debit Note'))->searchable(false),
-            Column::make('bill')->title(__('Bill / Purchase')),
+            Column::make('bill')->title(__('Bill')),
+            Column::make('vendor')->title(__('Vendor')),
             Column::make('date')->title(__('Date')),
             Column::make('amount')->title(__('Amount')),
             Column::make('description')->title(__('Description')),

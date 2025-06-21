@@ -13,11 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('bills') && !Schema::hasColumn('bills', 'account_type')) {
-            Schema::table('bills', function (Blueprint $table) {
+        Schema::table('bills', function (Blueprint $table) {
+            if (!Schema::hasColumn('bills', 'account_type')) {
                 $table->string('account_type')->after('user_id')->default('Accounting');
-            });
-        }
+            }
+        });
     }
 
     /**

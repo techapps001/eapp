@@ -37,6 +37,7 @@
                 "Workdo\\Stripe\\Providers\\EventShowBookingServiceProvider",
                 "Workdo\\Stripe\\Providers\\BookingsServiceProvider",
                 "Workdo\\Stripe\\Providers\\FacilitiesSerivceProvider",
+                "Workdo\\Stripe\\Providers\\CaseFeePayment",
                 "Workdo\\Stripe\\Providers\\ChildFeePayment",
                 "Workdo\\Stripe\\Providers\\VcardSerivceProvider",
                 "Workdo\\Stripe\\Providers\\CoworkingPlanServiceProvider",

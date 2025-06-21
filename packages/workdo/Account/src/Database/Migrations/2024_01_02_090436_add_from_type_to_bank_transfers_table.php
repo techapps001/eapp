@@ -14,11 +14,11 @@ return new class extends Migration
     public function up()
     {
 
-        if (Schema::hasTable('bank_transfers') && !Schema::hasColumn('bank_transfers', 'from_type')) {
-            Schema::table('bank_transfers', function (Blueprint $table) {
+        Schema::table('bank_transfers', function (Blueprint $table) {
+            if (!Schema::hasColumn('bank_transfers', 'from_type')) {
                 $table->string('from_type')->after('to_account');
-            });
-        }
+            }
+        });
     }
 
     /**

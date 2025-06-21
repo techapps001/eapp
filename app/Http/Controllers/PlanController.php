@@ -37,7 +37,7 @@ class PlanController extends Controller
                 $subscription = Session::get('Subscription');
                 $admin_settings = getAdminAllSetting();
                 if ((isset($admin_settings['plan_package']) ? $admin_settings['plan_package'] : 'off') == 'on'  && $request['type'] != 'subscription' && $subscription != 'custom_subscription') {
-                    return redirect()->route('active.plans')->with('success', session('success'))->with('error', session('error'));
+                    return redirect()->route('active.plans');
                 }
                 // Pre selected module, user,and time period on pricing page
                 $session = Session::get('user-module-selection');
@@ -254,9 +254,14 @@ class PlanController extends Controller
         if ($userPlan != null) {
             return redirect()->back()->with('error', __('The company has subscribed to this plan, so it cannot be deleted.'));
         }
+        $plan = Plan::find($id);
+        if ($plan->id == $id) {
+            $plan->delete();
 
-        $plan->delete();
-        return redirect()->back()->with('success', __('The plan has been deleted'));
+            return redirect()->back()->with('success', __('The plan has been deleted'));
+        } else {
+            return redirect()->back()->with('error', __('Something went wrong'));
+        }
     }
 
     public function PlanStore(Request $request)

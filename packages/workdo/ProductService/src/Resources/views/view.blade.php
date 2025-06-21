@@ -20,9 +20,9 @@
                     <div class="card sticky-top" style="top:30px">
                         <div class="list-group list-group-flush" id="useradd-sidenav">
                             <a href="#useradd-0"
-                                class="list-group-item list-group-item-action border-0 active">{{ __('Overview') }}
-                                <div class="float-end"><i class="ti ti-chevron-right"></i></div>
-                            </a>
+                                class="list-group-item list-group-item-action border-0 active">{{ __('Overview') }} <div
+                                    class="float-end"><i class="ti ti-chevron-right"></i></div></a>
+
                             <a href="#useradd-1"
                                 class="list-group-item list-group-item-action border-0 services {{ $productService->type == 'service' ? 'd-none' : '' }}">{{ __('Vendors') }}
                                 <div class="float-end"><i class="ti ti-chevron-right"></i></div>
@@ -35,20 +35,34 @@
                                 class="list-group-item list-group-item-action border-0 services {{ $productService->type == 'service' ? 'd-none' : '' }}">{{ __('Warehouse') }}
                                 <div class="float-end"><i class="ti ti-chevron-right"></i></div>
                             </a>
+
                             <a href="#useradd-4"
                                 class="list-group-item list-group-item-action border-0">{{ __('Reports') }} <div
-                                    class="float-end"><i class="ti ti-chevron-right"></i></div>
-                            </a>
+                                    class="float-end"><i class="ti ti-chevron-right"></i></div></a>
                             <a href="#useradd-5"
                                 class="list-group-item list-group-item-action border-0">{{ __('Log Time') }} <div
-                                    class="float-end"><i class="ti ti-chevron-right"></i></div>
-                            </a>
+                                    class="float-end"><i class="ti ti-chevron-right"></i></div></a>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-9">
                     <div id="useradd-0">
+                        <ul class="nav nav-pills nav-fill cust-nav information-tab mb-4" id="pills-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="item_details" data-bs-toggle="pill"
+                                    data-bs-target="#details-tab" type="button">{{ __('Details') }}</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="item_pricing" data-bs-toggle="pill"
+                                    data-bs-target="#pricing-tab" type="button">{{ __('Pricing') }}</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="item_image" data-bs-toggle="pill"
+                                    data-bs-target="#media-tab" type="button">{{ __('Images') }}</button>
+                            </li>
+
+                        </ul>
                         <div class="row">
                             <div class="col-sm-12">
                                 <div class="row">
@@ -82,7 +96,7 @@
                                                     <div class="col-md-6 col-12 mb-4">
                                                         <div class="card h-100 mb-0">
                                                             <div class="card-body">
-                                                                <h5>{{ __('Details') }} : </h5><br>
+                                                                <h5>{{ __('Details') }}</h5>
                                                                 <div class="row">
                                                                     <dt class="col-sm-4 h6 text-lg">{{ __('Name') }}
                                                                     </dt>
@@ -128,37 +142,42 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div class="tab-pane active show fade" role="tabpanel" aria-labelledby="pills-user-tab-2">
-                                                    <div class="row">
-                                                        <div class="col-12">
-                                                            <div class="card">
-                                                                <div class="card-body">
-                                                                    <div class="row">
-                                                                        <dt class="col-sm-4 h6 text-lg">
-                                                                            {{ __('Purchase Price') }}
-                                                                        </dt>
-                                                                        <dd class="col-sm-8 text-lg">
-                                                                            {{ $productService->purchase_price }}
-                                                                        </dd>
-                                                                        <dt class="col-sm-4 h6 text-lg">
-                                                                            {{ __('Unit') }}
-                                                                        </dt>
-                                                                        <dd class="col-sm-8 text-lg">
-                                                                            {{ optional($productService->units)->name ??'' }}
+                                            </div>
+                                            <div class="tab-pane fade" id="pricing-tab" role="tabpanel"
+                                                aria-labelledby="pills-user-tab-2">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <div class="row">
+                                                                    <dt class="col-sm-4 h6 text-lg">
+                                                                        {{ __('Purchase Price') }}
+                                                                    </dt>
+                                                                    <dd class="col-sm-8 text-lg">
+                                                                        {{ $productService->purchase_price }}
+                                                                    </dd>
+                                                                    <dt class="col-sm-4 h6 text-lg">
+                                                                        {{ __('Unit') }}
+                                                                    </dt>
+                                                                    <dd class="col-sm-8 text-lg">
+                                                                        {{ optional($productService->units)->name ??'' }}
 
-                                                                        </dd>
-                                                                        <dt class="col-sm-4 h6 text-lg">
-                                                                            {{ __('Sale Price') }}
-                                                                        </dt>
-                                                                        <dd class="col-sm-8 text-lg">
-                                                                            {{ $productService->sale_price }}
-                                                                        </dd>
-                                                                    </div>
+                                                                    </dd>
+                                                                    <dt class="col-sm-4 h6 text-lg">
+                                                                        {{ __('Sale Price') }}
+                                                                    </dt>
+                                                                    <dd class="col-sm-8 text-lg">
+                                                                        {{ $productService->sale_price }}
+                                                                    </dd>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
+
                                                 </div>
+                                            </div>
+                                            <div class="tab-pane fade" id="media-tab" role="tabpanel"
+                                                aria-labelledby="pills-user-tab-3">
                                             </div>
                                         </div>
                                     </div>

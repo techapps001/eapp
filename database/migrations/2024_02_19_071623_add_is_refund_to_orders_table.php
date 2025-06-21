@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('orders') && !Schema::hasColumn('orders', 'is_refund')) {
-            Schema::table('orders', function (Blueprint $table) {
-                $table->integer('is_refund')->default(0)->nullable()->after('user_id');
-            });
-        }
+        Schema::table('orders', function (Blueprint $table) {
+            if (!Schema::hasColumn('orders', 'is_refund')) {
+            $table->integer('is_refund')->default(0)->nullable()->after('user_id');
+            }
+        });
     }
 
     /**

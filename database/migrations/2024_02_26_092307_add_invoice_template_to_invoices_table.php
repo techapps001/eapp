@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('invoices') && !Schema::hasColumn('invoices', 'invoice_template')) {
-            Schema::table('invoices', function (Blueprint $table) {
+        Schema::table('invoices', function (Blueprint $table) {
+            if (!Schema::hasColumn('invoices', 'invoice_template')) {
                 $table->string('invoice_template')->after('invoice_module')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**

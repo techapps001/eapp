@@ -17,7 +17,6 @@
             var vendorId = '{{ $vendorId }}';
             if (vendorId > 0) {
                 $('#vendor').val(vendorId).change();
-                $('#account_type').val('Accounting').trigger('change');
             }
         });
         $(document).on('change', '#vendor', function() {
@@ -282,7 +281,7 @@
                             }
                             var itemTaxPrice = 0;
                             if (item.product != null) {
-                                var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product.purchase_price *
+                                var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product.sale_price *
                                     1));
                             }
                             $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
@@ -422,8 +421,7 @@
                 $(".discount_apply_div").removeClass('d-none');
                 $(".tax_project_div").addClass('d-none');
                 $(".discount_project_div").addClass('d-none');
-                $(".expense_account_div").addClass('d-none');
-                $(".account_id").removeAttr('required');
+
                 var label =
                     `{{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }} {{ Form::select('category_id', $category, null, ['class' => 'form-control', 'required' => 'required']) }}`;
                 $(".bill_div").append(label);
@@ -433,8 +431,6 @@
                 $(".discount_apply_div").addClass('d-none');
                 $(".tax_project_div").removeClass('d-none');
                 $(".discount_project_div").removeClass('d-none');
-                $(".expense_account_div").removeClass('d-none');
-                $(".account_id").attr('required', true);
 
                 var label =
                     ` {{ Form::label('project', __('Project'), ['class' => 'form-label']) }} {{ Form::select('project', $projects, $projectsid, ['class' => 'form-control', 'required' => 'required']) }}`
@@ -482,31 +478,34 @@
         });
     </script>
     <script>
-        var optionsMap = {
-            'Accounting': 'Item Wise',
-            'Projects': 'Project Wise',
-        };
+        $(document).ready(function() {
 
-        function mapSelectionToValue(selection) {
-            switch (selection) {
-                case 'Accounting':
-                    return 'product';
-                case 'Projects':
-                    return 'project';
-                default:
-                    return null;
-            }
-        }
+            var optionsMap = {
+                'Accounting': 'Item Wise',
+                'Projects': 'Project Wise',
+            };
 
-        $('#account_type').on('change', function() {
-            var selectedOption = $(this).val();
-            $('#billing_type').empty();
-            if (optionsMap.hasOwnProperty(selectedOption)) {
-                var value = mapSelectionToValue(selectedOption);
-                if (value !== null) {
-                    $('[name="bill_type_radio"]').append('<option value="' + value + '">' + optionsMap[selectedOption] + '</option>').trigger('change');
+            function mapSelectionToValue(selection) {
+                switch (selection) {
+                    case 'Accounting':
+                        return 'product';
+                    case 'Projects':
+                        return 'project';
+                    default:
+                        return null;
                 }
             }
+
+            $('#account_type').on('change', function() {
+                var selectedOption = $(this).val();
+                $('#billing_type').empty();
+                if (optionsMap.hasOwnProperty(selectedOption)) {
+                    var value = mapSelectionToValue(selectedOption);
+                    if (value !== null) {
+                        $('[name="bill_type_radio"]').append('<option value="' + value + '">' + optionsMap[selectedOption] + '</option>').trigger('change');
+                    }
+                }
+            });
         });
     </script>
 @endpush
@@ -642,29 +641,6 @@
                                         </div>
                                     </div>
                                 @endif
-                                <div class="form-group expense_account_div col-md-6">
-                                    {{ Form::label('expense_chartaccount_id', __('Expense Account'),['class'=>'form-label']) }}
-                                    <select name="expense_chartaccount_id" class="form-control">
-                                        <option value="">Select Chart of Account</option>
-                                        @foreach ($expenseChartAccounts as $typeName => $subtypes)
-                                            <optgroup label="{{ $typeName }}">
-                                                @foreach ($subtypes as $subtypeId => $subtypeData)
-                                                    <option disabled style="color: #000; font-weight: bold;">{{ $subtypeData['account_name'] }}</option>
-                                                    @foreach ($subtypeData['chart_of_accounts'] as $chartOfAccount)
-                                                        <option value="{{ $chartOfAccount['id'] }}">
-                                                            &nbsp;&nbsp;&nbsp;{{ $chartOfAccount['account_name'] }}
-                                                        </option>
-                                                        @foreach ($subtypeData['subAccounts'] as $subAccount)
-                                                            @if ($chartOfAccount['id'] == $subAccount['parent'])
-                                                            <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp;&nbsp; {{' - '. $subAccount['account_name'] }}</option>
-                                                            @endif
-                                                        @endforeach
-                                                    @endforeach
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    </select>
-                                </div>
                                 @if (module_is_active('CustomField') && !$customFields->isEmpty())
                                     <div class="col-md-12">
                                         <div class="tab-pane fade show" id="tab-2" role="tabpanel">

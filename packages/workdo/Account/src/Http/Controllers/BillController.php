@@ -17,13 +17,11 @@ use Workdo\Account\DataTables\BillDataTable;
 use Workdo\Account\Entities\AccountUtility;
 use Workdo\Account\Entities\BankAccount;
 use Workdo\Account\Entities\Bill;
+use Workdo\Account\Entities\BillAccount;
 use Workdo\Account\Entities\BillAttechment;
 use Workdo\Account\Entities\BillPayment;
 use Workdo\Account\Entities\BillProduct;
 use Workdo\Account\Entities\ChartOfAccount;
-use Workdo\Account\Entities\ChartOfAccountSubType;
-use Workdo\Account\Entities\ChartOfAccountType;
-use Workdo\Account\Entities\CustomerDebitNotes;
 use Workdo\Account\Entities\StockReport;
 use Workdo\Account\Entities\Transaction;
 use Workdo\Account\Entities\Transfer;
@@ -81,57 +79,6 @@ class BillController extends Controller
                 $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
                 $product_services->prepend('--', '');
 
-                $expenseTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                ->where('workspace', getActiveWorkSpace())
-                ->whereIn('name', ['Assets', 'Liabilities', 'Expenses', 'Costs of Goods Sold'])
-                ->get();
-
-                $expenseChartAccounts = [];
-
-                foreach ($expenseTypes as $type) {
-                    $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                        ->where('created_by', '=', creatorId())
-                        ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                        ->get();
-
-                    $temp = [];
-
-                    foreach ($accountTypes as $accountType) {
-                        $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                        $expenseSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                        ->where('created_by', '=', creatorId())
-                        ->get();
-
-                        $tempData = [
-                            'account_name' => $accountType->name,
-                            'chart_of_accounts' => [],
-                            'subAccounts' => [],
-                        ];
-                        foreach ($chartOfAccounts as $chartOfAccount) {
-                            $tempData['chart_of_accounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                            ];
-                        }
-
-                        foreach ($expenseSubAccounts as $chartOfAccount) {
-                            $tempData['subAccounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                                'parent'=>$chartOfAccount->parent
-                            ];
-                        }
-                        $temp[$accountType->id] = $tempData;
-                    }
-
-                    $expenseChartAccounts[$type->name] = $temp;
-                }
-
                 if (module_is_active('CustomField')) {
                     $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', getActiveWorkSpace())->where('module', '=', 'Account')->where('sub_module', 'Bill')->get();
                 } else {
@@ -146,7 +93,7 @@ class BillController extends Controller
                     $projects = \Workdo\Taskly\Entities\Project::select('projects.*')->join('user_projects', 'projects.id', '=', 'user_projects.project_id')->where('user_projects.user_id', '=', Auth::user()->id)->where('workspace', getActiveWorkSpace())->projectonly()->get()->pluck('name', 'id');
                 }
 
-                return view('account::bill.create', compact('vendors', 'bill_number', 'product_services', 'category', 'vendorId', 'customFields', 'product_type', 'projects', 'taxs' , 'expenseChartAccounts'));
+                return view('account::bill.create', compact('vendors', 'bill_number', 'product_services', 'category', 'vendorId', 'customFields', 'product_type', 'projects', 'taxs'));
             } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
@@ -216,6 +163,18 @@ class BillController extends Controller
                         $billProduct->save();
                     }
 
+                    if (!empty($products[$i]['chart_account_id'])) {
+                        $billAccount = new BillAccount();
+                        $billAccount->chart_account_id = $products[$i]['chart_account_id'];
+                        $billAccount->price = $products[$i]['price'];
+                        $billAccount->description = $products[$i]['description'];
+                        $billAccount->type = 'Bill';
+                        $billAccount->ref_id = $bill->id;
+                        $billAccount->created_by = creatorId();
+                        $billAccount->workspace = getActiveWorkSpace();
+                        $billAccount->save();
+                    }
+
                     if (!empty($billProduct)) {
                         Invoice::total_quantity('plus', $billProduct->quantity, $billProduct->product_id);
                     }
@@ -242,7 +201,7 @@ class BillController extends Controller
 
                 event(new CreateBill($request, $bill));
 
-                    return redirect()->route('bill.index', $bill->id)->with('success', __('The Bill has been created successfully.'));
+                    return redirect()->route('bill.index', $bill->id)->with('success', __('Bill successfully created.'));
 
             } else if ($request->bill_type == "project") {
                 $validator = \Validator::make(
@@ -272,7 +231,6 @@ class BillController extends Controller
                 $bill->account_type = $request->account_type;
                 $bill->bill_date = $request->bill_date;
                 $bill->status = 0;
-                $bill->account_id = $request->expense_chartaccount_id;
                 $bill->bill_module = 'taskly';
                 $bill->due_date = $request->due_date;
                 $bill->category_id = $request->project;
@@ -403,57 +361,6 @@ class BillController extends Controller
 
                 $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
 
-                $expenseTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                ->where('workspace', getActiveWorkSpace())
-                ->whereIn('name', ['Assets', 'Liabilities', 'Expenses', 'Costs of Goods Sold'])
-                ->get();
-
-                $expenseChartAccounts = [];
-
-                foreach ($expenseTypes as $type) {
-                    $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                        ->where('created_by', '=', creatorId())
-                        ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                        ->get();
-
-                    $temp = [];
-
-                    foreach ($accountTypes as $accountType) {
-                        $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                        $expenseSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                        ->where('created_by', '=', creatorId())
-                        ->get();
-
-                        $tempData = [
-                            'account_name' => $accountType->name,
-                            'chart_of_accounts' => [],
-                            'subAccounts' => [],
-                        ];
-                        foreach ($chartOfAccounts as $chartOfAccount) {
-                            $tempData['chart_of_accounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                            ];
-                        }
-
-                        foreach ($expenseSubAccounts as $chartOfAccount) {
-                            $tempData['subAccounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                                'parent'=>$chartOfAccount->parent
-                            ];
-                        }
-                        $temp[$accountType->id] = $tempData;
-                    }
-
-                    $expenseChartAccounts[$type->name] = $temp;
-                }
-
                 if (module_is_active('CustomField')) {
                     $bill->customField = \Workdo\CustomField\Entities\CustomField::getData($bill, 'Account', 'Bill');
                     $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', '=', getActiveWorkSpace())->where('module', '=', 'Account')->where('sub_module', 'Bill')->get();
@@ -473,7 +380,7 @@ class BillController extends Controller
 
 
 
-                return view('account::bill.edit', compact('vendors', 'product_services', 'bill', 'bill_number', 'category', 'customFields', 'product_type', 'projects', 'taxs' , 'expenseChartAccounts'));
+                return view('account::bill.edit', compact('vendors', 'product_services', 'bill', 'bill_number', 'category', 'customFields', 'product_type', 'projects', 'taxs'));
             } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
@@ -513,6 +420,8 @@ class BillController extends Controller
                     }
                     if ($request->bill_type == "product") {
                         $request->bill_type = 'account';
+                    } else if ($request->bill_type == "project") {
+                        $request->bill_type = 'taskly';
                     }
                     if ($request->bill_type != $bill->bill_module) {
                         BillProduct::where('bill_id', '=', $bill->id)->delete();
@@ -594,6 +503,27 @@ class BillController extends Controller
                         $billProduct->description = str_replace("'", "", $products[$i]['description']);
                         $billProduct->save();
 
+                        if (!empty($products[$i]['chart_account_id'])) {
+                            $billAccount = BillAccount::find($products[$i]['id']);
+
+                            if ($billAccount == null) {
+                                $billAccount = new BillAccount();
+                                $billAccount->chart_account_id = $products[$i]['chart_account_id'];
+
+
+                            } else {
+                                $billAccount->chart_account_id = $products[$i]['chart_account_id'];
+                            }
+
+                            $billAccount->price = $products[$i]['price'];
+                            $billAccount->description = $products[$i]['description'];
+                            $billAccount->type = 'Bill';
+                            $billAccount->ref_id = $bill->id;
+                            $billAccount->created_by = creatorId();
+                            $billAccount->workspace = getActiveWorkSpace();
+                            $billAccount->save();
+                        }
+
                         if ($products[$i]['id'] > 0) {
                             Invoice::total_quantity('plus', $products[$i]['quantity'], $billProduct->product_id);
                         }
@@ -632,9 +562,6 @@ class BillController extends Controller
                             $bill->vendor_signature = NULL;
                         }
                     }
-                    if ($request->bill_type == "project") {
-                        $request->bill_type = 'taskly';
-                    }
                     if ($request->bill_type != $bill->bill_module) {
                         BillProduct::where('bill_id', '=', $bill->id)->delete();
                     }
@@ -642,7 +569,6 @@ class BillController extends Controller
                     $bill->user_id = !empty($vendor) ? $vendor->user_id : null;
                     $bill->bill_date = $request->bill_date;
                     $bill->account_type = $request->account_type;
-                    $bill->account_id = $request->expense_chartaccount_id;
                     $bill->due_date = $request->due_date;
                     $bill->bill_module = 'taskly';
                     $bill->order_number = $request->order_number;
@@ -688,79 +614,69 @@ class BillController extends Controller
      */
     public function destroy(Bill $bill)
     {
-        if (Auth::user()->isAbleTo('bill delete'))
-        {
-            $billDebitNotes = CustomerDebitNotes::where('bill', $bill->id)->where('type' , 'bill')->first();
-            if(!$billDebitNotes)
-            {
-                if ($bill->workspace == getActiveWorkSpace()) {
-                    if ($bill->vendor_id != 0 && $bill->status != 0) {
-                        $getDue = $bill->getTotal() - $bill->getDue();
-                        AccountUtility::updateUserBalance('vendor', $bill->vendor_id, $getDue, 'debit');
-                    }
-                    BillAttechment::where('bill_id', '=', $bill->id)->delete();
-
-                    $bill_payments = BillPayment::where('bill_id', $bill->id)->get();
-                    if (!empty($bill_payments)) {
-                        foreach ($bill_payments as $bill_payment) {
-                            $account = BankAccount::where(['created_by' => $bill->created_by, 'workspace' => $bill->workspace])->select('id')->first();
-                            $account_id = $bill_payment->account_id == 0 ? $account->id : $bill_payment->account_id;
-                            Transfer::bankAccountBalance($account_id, $bill_payment->amount, 'credit');
-                            delete_file($bill_payment->add_receipt);
-                            $bill_payment->delete();
-                        }
-                    }
-                    if (module_is_active('CustomField')) {
-                        $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'Account')->where('sub_module', 'Bill')->get();
-                        foreach ($customFields as $customField) {
-                            $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $bill->id)->where('field_id', $customField->id)->first();
-                            if (!empty($value)) {
-
-                                $value->delete();
-                            }
-                        }
-                    }
-
-                    $billProducts = BillProduct::where('bill_id', '=', $bill->id)->get();
-                    foreach ($billProducts as $key => $billProduct)
-                    {
-                        if (!empty($billProduct)) {
-                            Invoice::total_quantity('minus', $billProduct->quantity, $billProduct->product_id);
-                        }
-
-                        //Product Stock Report
-                        if (!empty($billProduct['product_id'])) {
-                            $type = 'bill';
-                            $type_id = $bill->id;
-                            $description = $billProduct['quantity'] . '  ' . __(' quantity delete in bill') . ' ' . Bill::billNumberFormat($bill->bill_id);
-                            Bill::addProductStock($billProduct['product_id'], $billProduct['quantity'], $type, $description, $type_id);
-                        }
-
-                        //Warehouse Stock Report
-                        $product = ProductService::find($billProduct->product_id);
-                        if(!empty($product) && !empty($product->warehouse_id))
-                        {
-                            Invoice::warehouse_quantity('minus',$billProduct->quantity,$billProduct->product_id,$product->warehouse_id);
-                        }
-
-                        $stocks = \Workdo\Account\Entities\StockReport::where('type', '=', 'bill')->where('type_id', '=', $billProduct->invoice_id)->where('product_id',$billProduct->product_id)->get();
-                        foreach($stocks as $stock)
-                        {
-                            $stock->delete();
-                        }
-                        $billProduct->delete();
-                    }
-
-                    event(new DestroyBill($bill));
-
-                    $bill->delete();
-
-                    return redirect()->route('bill.index')->with('success', __('The Bill has been deleted.'));
-                } else {
-                    return redirect()->back()->with('error', __('Permission denied.'));
+        if (Auth::user()->isAbleTo('bill delete')) {
+            if ($bill->workspace == getActiveWorkSpace()) {
+                if ($bill->vendor_id != 0 && $bill->status != 0) {
+                    AccountUtility::updateUserBalance('vendor', $bill->vendor_id, $bill->getTotal(), 'credit');
                 }
+                BillAccount::where('ref_id', '=', $bill->id)->delete();
+                BillAttechment::where('bill_id', '=', $bill->id)->delete();
+
+                $bill_payments = BillPayment::where('bill_id', $bill->id)->get();
+                if (!empty($bill_payments)) {
+                    foreach ($bill_payments as $bill_payment) {
+                        delete_file($bill_payment->add_receipt);
+                        $bill_payment->delete();
+                    }
+                }
+                if (module_is_active('CustomField')) {
+                    $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'Account')->where('sub_module', 'Bill')->get();
+                    foreach ($customFields as $customField) {
+                        $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $bill->id)->where('field_id', $customField->id)->first();
+                        if (!empty($value)) {
+
+                            $value->delete();
+                        }
+                    }
+                }
+
+                $billProducts = BillProduct::where('bill_id', '=', $bill->id)->get();
+                foreach ($billProducts as $key => $billProduct)
+                {
+                    if (!empty($billProduct)) {
+                        Invoice::total_quantity('minus', $billProduct->quantity, $billProduct->product_id);
+                    }
+
+                    //Product Stock Report
+                    if (!empty($billProduct['product_id'])) {
+                        $type = 'bill';
+                        $type_id = $bill->id;
+                        $description = $billProduct['quantity'] . '  ' . __(' quantity delete in bill') . ' ' . Bill::billNumberFormat($bill->bill_id);
+                        Bill::addProductStock($billProduct['product_id'], $billProduct['quantity'], $type, $description, $type_id);
+                    }
+
+                    //Warehouse Stock Report
+                    $product = ProductService::find($billProduct->product_id);
+                    if(!empty($product) && !empty($product->warehouse_id))
+                    {
+                        Invoice::warehouse_quantity('minus',$billProduct->quantity,$billProduct->product_id,$product->warehouse_id);
+                    }
+
+                    $stocks = \Workdo\Account\Entities\StockReport::where('type', '=', 'bill')->where('type_id', '=', $billProduct->invoice_id)->where('product_id',$billProduct->product_id)->get();
+                    foreach($stocks as $stock)
+                    {
+                        $stock->delete();
+                    }
+                    $billProduct->delete();
+                }
+
+                event(new DestroyBill($bill));
+
+                $bill->delete();
+
+                return redirect()->route('bill.index')->with('success', __('The Bill has been deleted.'));
             } else {
-                return redirect()->back()->with('error', __('A debit note has been created for this bill, so it cannot be deleted.'));
+                return redirect()->back()->with('error', __('Permission denied.'));
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -869,6 +785,8 @@ class BillController extends Controller
 
             $billId = Crypt::encrypt($bill->id);
             $bill->url = route('bill.pdf', $billId);
+
+            AccountUtility::updateUserBalance('vendor', $vendor->id, $bill->getTotal(), 'debit');
 
             event(new SentBill($bill));
             if (!empty(company_setting('Bill Send')) && company_setting('Bill Send') == true) {
@@ -1073,7 +991,7 @@ class BillController extends Controller
 
             event(new PaymentDestroyBill($bill, $payment));
             $payment->delete();
-
+            
             $bill->save();
             return redirect()->back()->with('success', __('The payment has been deleted.'));
 

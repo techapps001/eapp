@@ -71,9 +71,6 @@ class ProductServiceController extends Controller
             if (module_is_active(('JewelleryStoreManagement'))) {
                 $product_type['jewellery store'] = 'Jewellery Store';
             }
-            if (module_is_active('RestaurantMenu')) {
-                $product_type['restaurants'] = 'Restaurant Menu';
-            }
             return $dataTable->render('product-service::index',compact('category','product_type'));
         }
         else
@@ -118,7 +115,6 @@ class ProductServiceController extends Controller
             if (module_is_active(('JewelleryStoreManagement'))) {
                 $product_type['jewellery store'] = 'Jewellery Store';
             }
-            
             return view('product-service::create', compact('product_type'));
         }
         else
@@ -430,7 +426,7 @@ class ProductServiceController extends Controller
      */
     public function show($id)
      {
-         if (\Auth::user()->isAbleTo('product&service show')) {
+         if (\Auth::user()->isAbleTo('product&service edit')) {
              $productService = ProductService::find($id);
              $vendors = User::where('workspace_id',getActiveWorkSpace())
                  ->leftjoin('vendors', 'users.id', '=', 'vendors.user_id')
@@ -580,9 +576,6 @@ class ProductServiceController extends Controller
             if(module_is_active('Fleet')) {
                 $product_type['fleet'] = 'Fleet';
             }
-             if (module_is_active('ConsignmentManagement')) {
-                $product_type['consignment'] = 'Consignment';
-            }
             if(module_is_active('Facilities')) {
                 $product_type['facilities'] = 'Facilities';
             }
@@ -591,9 +584,6 @@ class ProductServiceController extends Controller
             }
             if (module_is_active(('JewelleryStoreManagement'))) {
                 $product_type['jewellery store'] = 'Jewellery Store';
-            }
-            if (module_is_active('RestaurantMenu')) {
-                $product_type['restaurants'] = 'Restaurant Menu';
             }
 
             $productServices = ProductService::select('product_services.*', DB::raw('GROUP_CONCAT(taxes.name) as tax_names'))
@@ -851,12 +841,7 @@ class ProductServiceController extends Controller
 
     public function GetItem(Request $request)
     {
-        if($request->type == 'edit') {
-            $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace());
-        }
-        else {
-            $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->whereNotIn('id', explode(',', $request->productItems));
-        }
+        $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace());
         if (module_is_active('CMMS')) {
             $product_type['parts'] = 'Parts';
         }

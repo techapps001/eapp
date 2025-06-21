@@ -54,7 +54,6 @@ class BankAccountController extends Controller
         if (Auth::user()->isAbleTo('bank account create')) {
             $chartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
                 ->where('parent', '=', 0)
-                ->whereNotIn('name',['Accounts Receivable','Accounts Payable'])
                 ->where('workspace', getActiveWorkSpace())
                 ->where('created_by', creatorId())->get()
                 ->pluck('code_name', 'id');
@@ -100,14 +99,14 @@ class BankAccountController extends Controller
                 return redirect()->route('bank-account.index')->with('error', $messages->first());
             }
 
-            if (BankAccount::where('payment_name', $request->payment_name)->where('workspace' , getActiveWorkSpace())->where('created_by' , creatorId())->exists()) {
-                return redirect()->route('bank-account.index')->with('error', __('This payment name already exists.'));
+            if (BankAccount::where('payment_name', $request->payment_name)->exists()) {
+                return redirect()->route('bank-account.index')->with('error', 'This payment name already exists.');
             }
 
             $account                   = new BankAccount();
             $account->chart_account_id = $request->chart_account_id;
             $account->holder_name      = $request->holder_name;
-            $account->payment_name     = isset($request->payment_name) ? $request->payment_name : '--';
+            $account->payment_name     = $request->payment_name;
             $account->bank_name        = $request->bank_name;
             $account->bank_type        = $request->bank_type;
             $account->wallet_type      = $request->wallet_type;
@@ -131,7 +130,7 @@ class BankAccountController extends Controller
                 'reference_sub_id' => 0,
                 'date' => date('Y-m-d'),
             ];
-            // AccountUtility::addTransactionLines($data);
+            AccountUtility::addTransactionLines($data);
             //end for opening balance add in chartOfAccount
 
             event(new CreateBankAccount($request, $account));
@@ -149,13 +148,7 @@ class BankAccountController extends Controller
      */
     public function show($id)
     {
-        if (Auth::user()->isAbleTo('bank account edit'))
-        {
-            $bankAccount = BankAccount::find($id);
-            return view('account::bankAccount.view', compact('bankAccount'));
-        } else {
-           return redirect()->back()->with('error', __('Permission denied.'));
-        }
+        return redirect()->back();
     }
 
     /**
@@ -174,7 +167,6 @@ class BankAccountController extends Controller
 
             $chartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
                 ->where('parent', '=', 0)
-                ->whereNotIn('name',['Accounts Receivable','Accounts Payable'])
                 ->where('workspace', getActiveWorkSpace())
                 ->where('created_by', creatorId())->get()
                 ->pluck('code_name', 'id');
@@ -221,14 +213,18 @@ class BankAccountController extends Controller
             }
 
             $account = BankAccount::findOrFail($id);
-            if (BankAccount::where('payment_name', $request->payment_name)->where('id', '!=', $id)->where('workspace' , getActiveWorkSpace())->where('created_by' , creatorId())->exists()
+
+            if (
+                BankAccount::where('payment_name', $request->payment_name)
+                    ->where('id', '!=', $id)
+                    ->exists()
             ) {
-                return redirect()->route('bank-account.index')->with('error', __('This payment name already exists.'));
+                return redirect()->route('bank-account.index')->with('error', 'This payment name already exists.');
             }
 
             $account->chart_account_id = $request->chart_account_id;
             $account->holder_name      = $request->holder_name;
-            $account->payment_name     = isset($request->payment_name) ? $request->payment_name : '--';
+            $account->payment_name     = $request->payment_name;
             $account->bank_name        = $request->bank_name;
             $account->bank_type        = $request->bank_type;
             $account->wallet_type      = $request->wallet_type;

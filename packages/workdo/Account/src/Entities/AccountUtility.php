@@ -635,17 +635,15 @@ class AccountUtility extends Model
 
     public static $chartOfAccountSubType = array(
         "assets" => array(
-            '1' => 'Accounts Receivable',
-            '2' => 'Current Asset',
-            '3' => 'Inventory Asset',
-            '4' => 'Non-current Asset'
+            '1' => 'Current Asset',
+            '2' => 'Inventory Asset',
+            '3' => 'Non-current Asset',
         ),
         "liabilities" => array(
-            '1' => 'Accounts Payable',
-            '2' => 'Current Liabilities',
-            '3' => 'Long Term Liabilities',
-            '4' => 'Share Capital',
-            '5' => 'Retained Earnings'
+            '1' => 'Current Liabilities',
+            '2' => 'Long Term Liabilities',
+            '3' => 'Share Capital',
+            '4' => 'Retained Earnings',
         ),
         "equity" => array(
             '1' => 'Owners Equity',
@@ -668,13 +666,7 @@ class AccountUtility extends Model
     {
         $accounts =
             [
-                "Assets" => array(                    
-                    'Accounts Receivable' => array(
-                        [
-                            'code' => '1050',
-                            'name' => 'Accounts Receivable',
-                        ]
-                    ),
+                "Assets" => array(
                     'Current Asset' => array(
                         [
                             'code' => '1060',
@@ -683,6 +675,10 @@ class AccountUtility extends Model
                         [
                             'code' => '1065',
                             'name' => 'Petty Cash',
+                        ],
+                        [
+                            'code' => '1200',
+                            'name' => 'Account Receivables',
                         ],
                         [
                             'code' => '1205',
@@ -737,13 +733,11 @@ class AccountUtility extends Model
                     )
                 ),
                 "Liabilities" => array(
-                    'Accounts Payable' => array(
+                    'Current Liabilities' => array(
                         [
                             'code' => '2100',
-                            'name' => 'Accounts Payable',
-                        ]
-                    ),
-                    'Current Liabilities' => array(
+                            'name' => 'Account Payable',
+                        ],
                         [
                             'code' => '2105',
                             'name' => 'Deferred Income',
@@ -870,7 +864,7 @@ class AccountUtility extends Model
                             'code' => '3595',
                             'name' => 'Owners Drawings',
                         ],
-                    )
+                    ),
                 ),
                 "Equity" => array(
                     'Owners Equity' => array(
@@ -1228,61 +1222,6 @@ class AccountUtility extends Model
                                 }
                             }
                         }
-                        else
-                        {
-                            $check_type = ChartOfAccountType::where('workspace', $WorkSpace->id)->where('created_by', $company->id)->where('name', $type)->first();
-
-                            $chartOfAccountSubTypes = Self::$chartOfAccountSubType;
-                            foreach ($chartOfAccountSubTypes[$k] as $subType) {
-                                $check_subtype = ChartOfAccountSubType::where('workspace', $WorkSpace->id)->where('created_by', $company->id)->where('type', $check_type->id)->where('name', $subType)->first();
-                                if (empty($check_subtype)) {
-                                    $accountSubType = ChartOfAccountSubType::create(
-                                        [
-                                            'name' => $subType,
-                                            'type' => $check_type->id,
-                                            'workspace' => $WorkSpace->id,
-                                            'created_by' => $company->id,
-                                        ]
-                                    );
-
-                                    //when ChartOfAccount data empty
-                                    $chartOfAccounts = AccountUtility::chartOfAccount($type, $subType);
-                                    foreach ($chartOfAccounts as $chartAccount) {
-                                        $check_account = ChartOfAccount::where('workspace', $WorkSpace->id)
-                                            ->where('created_by', $company->id)->where('type', $check_type->id)
-                                            ->where('name', $subType)->where('name', $chartAccount['name'])->first();
-                                        $receivableAccount = ChartOfAccount::where('workspace', $WorkSpace->id)
-                                            ->where('created_by', $company->id)->where('type', $check_type->id)->where('name', 'Account Receivables')->first();
-                                            $payableAccount = ChartOfAccount::where('workspace', $WorkSpace->id)
-                                            ->where('created_by', $company->id)->where('type', $check_type->id)->where('name', 'Account Payable')->first();
-                                            if(!empty($receivableAccount))
-                                            {
-                                                $receivableAccount->delete();
-                                            }
-                                            if(!empty($payableAccount))
-                                            {
-                                                $payableAccount->delete();
-                                            }
-                                        if (empty($check_account)) {
-                                            ChartOfAccount::create(
-                                                [
-                                                    'name' => $chartAccount['name'],
-                                                    'code' => $chartAccount['code'],
-                                                    'type' => $check_type->id,
-                                                    'sub_type' => $accountSubType->id,
-                                                    'is_enabled' => 1,
-                                                    'workspace' => $WorkSpace->id,
-                                                    'created_by' => $company->id,
-
-                                                ]
-                                            );
-
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
 
 
                     }
@@ -1423,19 +1362,19 @@ class AccountUtility extends Model
         $types = ChartOfAccountType::where('created_by', creatorId())->where('workspace', getActiveWorkSpace())->get();
 
         foreach ($types as $type) {
-            $total = AddTransactionLine::
+            $total = \Workdo\Account\Entities\TransactionLines::
             select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name',
                 \DB::raw('sum(debit) as totalDebit'),
                 \DB::raw('sum(credit) as totalCredit'));
-            $total->leftjoin('chart_of_accounts', 'add_transaction_lines.account_id', 'chart_of_accounts.id');
+            $total->leftjoin('chart_of_accounts', 'transaction_lines.account_id', 'chart_of_accounts.id');
             $total->leftjoin('chart_of_account_types', 'chart_of_accounts.type', 'chart_of_account_types.id');
             $total->where('chart_of_accounts.type', $type->id);
-            $total->where('add_transaction_lines.created_by', creatorId());
-            $total->where('add_transaction_lines.account_id', $account_id);
-            $total->where('add_transaction_lines.workspace', getActiveWorkSpace());
-            $total->where('add_transaction_lines.date', '>=', $start);
-            $total->where('add_transaction_lines.date', '<=', $end);
-            $total->groupBy('add_transaction_lines.account_id');
+            $total->where('transaction_lines.created_by', creatorId());
+            $total->where('transaction_lines.account_id', $account_id);
+            $total->where('transaction_lines.workspace', getActiveWorkSpace());
+            $total->where('transaction_lines.date', '>=', $start);
+            $total->where('transaction_lines.date', '<=', $end);
+            $total->groupBy('transaction_lines.account_id');
             $total = $total->get()->toArray();
 
             $name = $type->name;
@@ -1501,39 +1440,40 @@ class AccountUtility extends Model
             $end = date('Y-m-t');
         }
 
-        $transactionData = DB::table('add_transaction_lines')
-            ->where('add_transaction_lines.created_by', creatorId())
-            ->where('add_transaction_lines.workspace', getActiveWorkSpace())
-            ->where('add_transaction_lines.account_id', $account_id)
-            ->whereBetween('add_transaction_lines.date', [$start, $end])
+        $transactionData = DB::table('transaction_lines')
+            ->where('transaction_lines.created_by', creatorId())
+            ->where('transaction_lines.workspace', getActiveWorkSpace())
+            ->where('transaction_lines.account_id', $account_id)
+            // ->whereBetween('transaction_lines.date', [$start, $end])
             ->leftJoin('invoices', function ($join) {
-                $join->on('add_transaction_lines.reference_id', '=', 'invoices.id')
-                    ->whereIn('add_transaction_lines.reference', ['Invoice Payment', 'Invoice']);
+                $join->on('transaction_lines.reference_id', '=', 'invoices.id')
+                    ->whereIn('transaction_lines.reference', ['Invoice Payment', 'Invoice']);
             })
             ->leftJoin('bills', function ($join) {
-                $join->on('add_transaction_lines.reference_id', '=', 'bills.id')
-                    ->whereIn('add_transaction_lines.reference', ['Bill', 'Bill Payment', 'Bill Account']);
+                $join->on('transaction_lines.reference_id', '=', 'bills.id')
+                    ->whereIn('transaction_lines.reference', ['Bill', 'Bill Payment', 'Bill Account']);
             })
             ->leftJoin('revenues', function ($join) {
-                $join->on('add_transaction_lines.reference_id', '=', 'revenues.id')
-                    ->whereIn('add_transaction_lines.reference', ['Revenue']);
+                $join->on('transaction_lines.reference_id', '=', 'revenues.id')
+                    ->whereIn('transaction_lines.reference', ['Revenue']);
             })
             ->leftJoin('payments', function ($join) {
-                $join->on('add_transaction_lines.reference_id', '=', 'payments.id')
-                    ->whereIn('add_transaction_lines.reference', ['Payment']);
+                $join->on('transaction_lines.reference_id', '=', 'payments.id')
+                    ->whereIn('transaction_lines.reference', ['Payment']);
             })
             ->leftJoin('customers as invoice_customer', 'invoices.customer_id', '=', 'invoice_customer.id')
             ->leftJoin('customers as revenue_customer', 'revenues.customer_id', '=', 'revenue_customer.id')
             ->leftJoin('vendors as bill_vendor', 'bills.vendor_id', '=', 'bill_vendor.id')
             ->leftJoin('vendors as payment_vendor', 'payments.vendor_id', '=', 'payment_vendor.id')
-            ->leftJoin('chart_of_accounts', 'add_transaction_lines.account_id', '=', 'chart_of_accounts.id')
+            ->leftJoin('chart_of_accounts', 'transaction_lines.account_id', '=', 'chart_of_accounts.id')
             ->select(
-                'add_transaction_lines.*',
+                'transaction_lines.*',
                 'invoice_customer.name as invoice_customer_name',
                 'revenue_customer.name as revenue_customer_name',
                 'bill_vendor.name as bill_vendor_name',
                 'payment_vendor.name as payment_vendor_name',
                 'chart_of_accounts.name as account_name',
+//                'vendors.name as vendor_name',
                 DB::raw("COALESCE(invoice_customer.name, revenue_customer.name,bill_vendor.name,payment_vendor.name) as user_name"),
             )->get();
 
@@ -1542,44 +1482,35 @@ class AccountUtility extends Model
 
     }
 
-    public static function addTransactionLines($data , $action = '' , $type = '')
+    public static function addTransactionLines($data , $action = '')
     {
-        if($type == 'notes')
-        {
-            $existingTransaction = \Workdo\Account\Entities\AddTransactionLine::where('reference', $data['reference'])
+        $existingTransaction = \Workdo\Account\Entities\TransactionLines::where('account_id', $data['account_id'])
+            ->where('reference', $data['reference'])
             ->where('reference_id', $data['reference_id'])
             ->where('reference_sub_id', $data['reference_sub_id'])
             ->first();
-        }
-        else
-        {
-            $existingTransaction = \Workdo\Account\Entities\AddTransactionLine::where('account_id', $data['account_id'])
-                ->where('reference', $data['reference'])
-                ->where('reference_id', $data['reference_id'])
-                ->where('reference_sub_id', $data['reference_sub_id'])
-                ->first();
-        }
-        
         if ($existingTransaction && $action == 'edit') {
             $transactionLines = $existingTransaction;
         } else {
-            $transactionLines = new  \Workdo\Account\Entities\AddTransactionLine();
+            $transactionLines = new  \Workdo\Account\Entities\TransactionLines();
         }
         $transactionLines->account_id = $data['account_id'];
         $transactionLines->reference = $data['reference'];
         $transactionLines->reference_id = $data['reference_id'];
         $transactionLines->reference_sub_id = $data['reference_sub_id'];
         $transactionLines->date = $data['date'];
-        if ($data['transaction_type'] == "credit") {
+        if ($data['transaction_type'] == "Credit") {
             $transactionLines->credit = $data['transaction_amount'];
             $transactionLines->debit = 0;
         } else {
             $transactionLines->credit = 0;
             $transactionLines->debit = $data['transaction_amount'];
         }
-        $transactionLines->workspace = $data['workspace'] ?? getActiveWorkSpace();
-        $transactionLines->created_by = $data['created_by'] ?? creatorId();
+        $transactionLines->workspace = getActiveWorkSpace();
+        $transactionLines->created_by = creatorId();
         $transactionLines->save();
+
+
     }
 
     // end for chart-of-account

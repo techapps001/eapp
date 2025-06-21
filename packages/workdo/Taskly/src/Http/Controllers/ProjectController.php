@@ -1291,29 +1291,24 @@ class ProjectController extends Controller
             } else {
                 $project = Project::select('projects.*')->join('user_projects', 'projects.id', '=', 'user_projects.project_id')->where('user_projects.user_id', '=', $objUser->id)->where('projects.workspace', '=', $currentWorkspace)->where('projects.id', '=', $project_id)->first();
             }
-            if(!empty($project)){
 
-                $stages = $statusClass = [];
+            $stages = $statusClass = [];
 
-                $stages = BugStage::where('workspace_id', '=', $currentWorkspace)->where('created_by',creatorId())->orderBy('order')->get();
+            $stages = BugStage::where('workspace_id', '=', $currentWorkspace)->where('created_by',creatorId())->orderBy('order')->get();
 
-                foreach ($stages as &$status) {
-                    $statusClass[] = 'task-list-' . str_replace(' ', '_', $status->id);
-                    $bug           = BugReport::where('project_id', '=', $project_id);
-                    if ($objUser->type != 'client') {
-                        if (!Auth::user()->hasRole('client') && !Auth::user()->hasRole('company')) {
-                            $bug->where('assign_to', '=', $objUser->id);
-                        }
+            foreach ($stages as &$status) {
+                $statusClass[] = 'task-list-' . str_replace(' ', '_', $status->id);
+                $bug           = BugReport::where('project_id', '=', $project_id);
+                if ($objUser->type != 'client') {
+                    if (!Auth::user()->hasRole('client') && !Auth::user()->hasRole('company')) {
+                        $bug->where('assign_to', '=', $objUser->id);
                     }
-                    $bug->orderBy('order');
-
-                    $status['bugs'] = $bug->where('status', '=', $status->id)->with('user')->get();
-
                 }
-                return view('taskly::projects.bug_report', compact('currentWorkspace', 'project', 'stages', 'statusClass'));
-            }else{
-                return redirect()->back()->with('error', __('Bug not found.'));
+                $bug->orderBy('order');
+
+                $status['bugs'] = $bug->where('status', '=', $status->id)->with('user')->get();
             }
+            return view('taskly::projects.bug_report', compact('currentWorkspace', 'project', 'stages', 'statusClass'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }

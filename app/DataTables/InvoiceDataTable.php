@@ -50,10 +50,32 @@ class InvoiceDataTable extends DataTable
                 }
             })
             ->addColumn('total_amount', function (Invoice $invoice) {
+                if ($invoice->invoice_module == 'childcare')
+                {
+                    return currency_format_with_sym($invoice->getChildTotal());
+                }
+                elseif ($invoice->invoice_module == 'Fleet')
+                {
+                    return currency_format_with_sym($invoice->getFleetSubTotal());
+                }
+                else
+                {
                     return currency_format_with_sym($invoice->getTotal());
+                }
             })
             ->addColumn('due_amount', function (Invoice $invoice) {
-                return currency_format_with_sym($invoice->getDue());
+                if ($invoice->invoice_module == 'childcare')
+                {
+                    return currency_format_with_sym($invoice->getChildDue());
+                }
+                elseif ($invoice->invoice_module == 'Fleet')
+                {
+                    return currency_format_with_sym($invoice->getFleetSubTotal());
+                }
+                else
+                {
+                    return currency_format_with_sym($invoice->getDue());
+                }
             })
             ->editColumn('status', function (Invoice $invoice) {
                 if ($invoice->status == 0)

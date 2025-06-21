@@ -33,7 +33,7 @@ class Order extends Model
 
     public static function total_orders_price()
     {
-        return Order::where('is_refund',0)->sum('price');
+        return Order::sum('price');
     }
 
     public function total_coupon_used()

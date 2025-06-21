@@ -23,7 +23,7 @@ class PaymentDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rawColumn = ['date', 'amount', 'description'];
+        $rawColumn = ['date', 'amount', 'add_receipt', 'description'];
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('date', function (Payment $payment) {
@@ -32,9 +32,30 @@ class PaymentDataTable extends DataTable
             ->editColumn('amount', function (Payment $payment) {
                 return currency_format_with_sym($payment->amount);
             })
+            ->editColumn('add_receipt', function (Payment $payment) {
+                if (!empty($payment->add_receipt)) {
+                    $fileUrl = get_file($payment->add_receipt);
+                    $html = '<div class="action-btn bg-primary ms-2">
+                        <a href="' . htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8') . '" download=""
+                            class="mx-3 btn btn-sm align-items-center" data-bs-toggle="tooltip"
+                            title="Download" target="_blank">
+                            <i class="ti ti-download text-white"></i>
+                        </a>
+                    </div>
+                    <div class="action-btn bg-secondary ms-2">
+                        <a href="' . htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8') . '"
+                            class="mx-3 btn btn-sm align-items-center" data-bs-toggle="tooltip"
+                            title="Show" target="_blank">
+                            <i class="ti ti-crosshair text-white"></i>
+                        </a>
+                    </div>';
+                } else {
+                    $html = '-';
+                }
+                return $html;
+            })
             ->editColumn('description', function (Payment $payment) {
-                $url = route('payment.description', $payment->id);
-                $html = '<a class="action-item" data-url="' . $url . '" data-ajax-popup="true" data-bs-toggle="tooltip" title="' . __('Description') . '" data-title="' . __('Description') . '"><i class="fa fa-comment"></i></a>';
+                $html = !empty($payment->description) ? $payment->description : '';
                 return $html;
             });
 
@@ -240,6 +261,7 @@ class PaymentDataTable extends DataTable
             Column::make('category_name')->title(__('Category'))->name('categories.name'),
             Column::make('reference')->title(__('Reference')),
             Column::make('description')->title(__('Description')),
+            Column::make('add_receipt')->title(__('Payment Receipt')),
         ];
         if (\Laratrust::hasPermission('expense payment delete') || \Laratrust::hasPermission('expense payment edit')) {
             $action = [

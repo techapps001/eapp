@@ -13,7 +13,33 @@
            $("input[name='bill_type_radio']:checked").trigger('change');
         });
 
+        $(document).on('click', '[data-repeater-delete]', function ()
+        {
+            var el = $(this).parent().parent();
+            var id = $(el.find('.id')).val();
 
+            $.ajax({
+                url: '{{route('bill.product.destroy')}}',
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': jQuery('#token').val()
+                },
+                data: {
+                    'id': id
+                },
+                cache: false,
+                success: function (data) {
+                    if (data.error) {
+                            toastrs('Error', data.error, 'error');
+                    } else {
+                            toastrs('Success', data.success, 'success');
+                    }
+                },
+                error: function (data) {
+                    toastrs('Error','{{ __("something went wrong please try again") }}', 'error');
+                },
+            });
+        });
         $(document).ready(function () {
             $("#vendor").trigger('change');
         });
@@ -55,174 +81,177 @@
         })
     </script>
     <script>
-        $(document).on('keyup', '.quantity', function () {
-            var quntityTotalTaxPrice = 0;
+            $(document).on('keyup', '.quantity', function () {
+                var quntityTotalTaxPrice = 0;
 
-            var el = $(this).parent().parent().parent().parent();
+                var el = $(this).parent().parent().parent().parent();
 
-            var quantity = $(this).val();
-            var price = $(el.find('.price')).val();
-            var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
-            }
-
-            var totalItemPrice = (quantity * price) - discount;
-
-            var amount = (totalItemPrice);
-
-
-            var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
-            var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
-            $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
-
-            var totalItemTaxPrice = 0;
-            var itemTaxPriceInput = $('.itemTaxPrice');
-            for (var j = 0; j < itemTaxPriceInput.length; j++) {
-                totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-            }
-
-
-            var totalItemPrice = 0;
-            var inputs_quantity = $(".quantity");
-
-            var priceInput = $('.price');
-            for (var j = 0; j < priceInput.length; j++) {
-                totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
-            }
-
-            var inputs = $(".amount");
-
-            var subTotal = 0;
-            for (var i = 0; i < inputs.length; i++) {
-                subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
-            }
-
-            $('.subTotal').html(totalItemPrice.toFixed(2));
-            $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-
-            $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
-        })
-
-        $(document).on('keyup change', '.price', function () {
-            var el = $(this).parent().parent().parent().parent();
-            var price = $(this).val();
-            var quantity = $(el.find('.quantity')).val();
-            if(quantity.length <= 0)
-            {
-                quantity = 1 ;
-            }
-            var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
-            }
-            var totalItemPrice = (quantity * price)-discount;
-
-            var amount = (totalItemPrice);
-
-            var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
-            var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
-            $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
-
-            var totalItemTaxPrice = 0;
-            var itemTaxPriceInput = $('.itemTaxPrice');
-            for (var j = 0; j < itemTaxPriceInput.length; j++) {
-                totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-            }
-
-
-            var totalItemPrice = 0;
-            var inputs_quantity = $(".quantity");
-            var priceInput = $('.price');
-            for (var j = 0; j < priceInput.length; j++) {
-                if(inputs_quantity[j].value <= 0)
+                var quantity = $(this).val();
+                var price = $(el.find('.price')).val();
+                var discount = $(el.find('.discount')).val();
+                if(discount.length <= 0)
                 {
-                    inputs_quantity[j].value = 1 ;
+                    discount = 0 ;
                 }
-                totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
-            }
 
-            var inputs = $(".amount");
+                var totalItemPrice = (quantity * price) - discount;
 
-            var subTotal = 0;
-            for (var i = 0; i < inputs.length; i++) {
-                subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
-            }
-
-            $('.subTotal').html(totalItemPrice.toFixed(2));
-            $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-
-            $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
-        })
-
-        $(document).on('keyup change', '.discount', function () {
-            var el = $(this).parent().parent().parent();
-            var discount = $(this).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
-            }
-
-            var price = $(el.find('.price')).val();
-            var quantity = $(el.find('.quantity')).val();
-            var totalItemPrice = (quantity * price) - discount;
+                var amount = (totalItemPrice);
 
 
-            var amount = (totalItemPrice);
+                var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
+                var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
+                $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
+
+                $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+
+                var totalItemTaxPrice = 0;
+                var itemTaxPriceInput = $('.itemTaxPrice');
+                for (var j = 0; j < itemTaxPriceInput.length; j++) {
+                    totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
+                }
 
 
-            var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
-            var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
-            $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
+                var totalItemPrice = 0;
+                var inputs_quantity = $(".quantity");
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+                var priceInput = $('.price');
+                for (var j = 0; j < priceInput.length; j++) {
+                    totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
+                }
 
-            var totalItemTaxPrice = 0;
-            var itemTaxPriceInput = $('.itemTaxPrice');
-            for (var j = 0; j < itemTaxPriceInput.length; j++) {
-                totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-            }
+                var inputs = $(".amount");
+
+                var subTotal = 0;
+                for (var i = 0; i < inputs.length; i++) {
+                    subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                }
+
+                $('.subTotal').html(totalItemPrice.toFixed(2));
+                $('.totalTax').html(totalItemTaxPrice.toFixed(2));
+
+                $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
+            })
+
+            $(document).on('keyup change', '.price', function () {
+                var el = $(this).parent().parent().parent().parent();
+                var price = $(this).val();
+                var quantity = $(el.find('.quantity')).val();
+                if(quantity.length <= 0)
+                {
+                    quantity = 1 ;
+                }
+                var discount = $(el.find('.discount')).val();
+                if(discount.length <= 0)
+                {
+                    discount = 0 ;
+                }
+                var totalItemPrice = (quantity * price)-discount;
+
+                var amount = (totalItemPrice);
+
+                var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
+                var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
+                $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
+
+                $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+
+                var totalItemTaxPrice = 0;
+                var itemTaxPriceInput = $('.itemTaxPrice');
+                for (var j = 0; j < itemTaxPriceInput.length; j++) {
+                    totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
+                }
 
 
-            var totalItemPrice = 0;
-            var inputs_quantity = $(".quantity");
-
-            var priceInput = $('.price');
-            for (var j = 0; j < priceInput.length; j++) {
-                totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
-            }
-
-            var inputs = $(".amount");
-
-            var subTotal = 0;
-            for (var i = 0; i < inputs.length; i++) {
-                subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
-            }
-
-
-            var totalItemDiscountPrice = 0;
-            var itemDiscountPriceInput = $('.discount');
-
-            for (var k = 0; k < itemDiscountPriceInput.length; k++) {
-                if (itemDiscountPriceInput[k].value == '') {
-                        itemDiscountPriceInput[k].value = parseFloat(0);
+                var totalItemPrice = 0;
+                var inputs_quantity = $(".quantity");
+                var priceInput = $('.price');
+                for (var j = 0; j < priceInput.length; j++) {
+                    if(inputs_quantity[j].value <= 0)
+                    {
+                        inputs_quantity[j].value = 1 ;
                     }
-                totalItemDiscountPrice += parseFloat(itemDiscountPriceInput[k].value);
-            }
+                    totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
+                }
+
+                var inputs = $(".amount");
+
+                var subTotal = 0;
+                for (var i = 0; i < inputs.length; i++) {
+                    subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                }
+
+                $('.subTotal').html(totalItemPrice.toFixed(2));
+                $('.totalTax').html(totalItemTaxPrice.toFixed(2));
+
+                $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
+            })
+
+            $(document).on('keyup change', '.discount', function () {
+                var el = $(this).parent().parent().parent();
+                var discount = $(this).val();
+                if(discount.length <= 0)
+                {
+                    discount = 0 ;
+                }
+
+                var price = $(el.find('.price')).val();
+                var quantity = $(el.find('.quantity')).val();
+                var totalItemPrice = (quantity * price) - discount;
 
 
-            $('.subTotal').html(totalItemPrice.toFixed(2));
-            $('.totalTax').html(totalItemTaxPrice.toFixed(2));
+                var amount = (totalItemPrice);
 
-            $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
-            $('.totalDiscount').html(totalItemDiscountPrice.toFixed(2));
-        })
+
+                var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
+                var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
+                $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
+
+                $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+
+                var totalItemTaxPrice = 0;
+                var itemTaxPriceInput = $('.itemTaxPrice');
+                for (var j = 0; j < itemTaxPriceInput.length; j++) {
+                    totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
+                }
+
+
+                var totalItemPrice = 0;
+                var inputs_quantity = $(".quantity");
+
+                var priceInput = $('.price');
+                for (var j = 0; j < priceInput.length; j++) {
+                    totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
+                }
+
+                var inputs = $(".amount");
+
+                var subTotal = 0;
+                for (var i = 0; i < inputs.length; i++) {
+                    subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                }
+
+
+                var totalItemDiscountPrice = 0;
+                var itemDiscountPriceInput = $('.discount');
+
+                for (var k = 0; k < itemDiscountPriceInput.length; k++) {
+                    if (itemDiscountPriceInput[k].value == '') {
+                            itemDiscountPriceInput[k].value = parseFloat(0);
+                        }
+                    totalItemDiscountPrice += parseFloat(itemDiscountPriceInput[k].value);
+                }
+
+
+                $('.subTotal').html(totalItemPrice.toFixed(2));
+                $('.totalTax').html(totalItemTaxPrice.toFixed(2));
+
+                $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
+                $('.totalDiscount').html(totalItemDiscountPrice.toFixed(2));
+            })
+
+
+
     </script>
         <script>
             $(document).on('change', '.item', function()
@@ -279,7 +308,7 @@
                             if(item.product != null)
                             {
                                 var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product
-                                .purchase_price * 1));
+                                .sale_price * 1));
                             }
                             $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
                             $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
@@ -405,8 +434,6 @@
                     $(".discount_apply_div").removeClass('d-none');
                     $(".tax_project_div").addClass('d-none');
                     $(".discount_project_div").addClass('d-none');
-                    $(".expense_account_div").addClass('d-none');
-                    $(".account_id").removeAttr('required');
 
                     var label = `{{ Form::label('category_id', __('Category'),['class'=>'form-label']) }} {{ Form::select('category_id', $category,null, array('class' => 'form-control','required'=>'required')) }}`;
                     $(".bill_div").append(label);
@@ -427,8 +454,6 @@
                     $(".discount_apply_div").addClass('d-none');
                     $(".tax_project_div").removeClass('d-none');
                     $(".discount_project_div").removeClass('d-none');
-                    $(".expense_account_div").removeClass('d-none');
-                    $(".account_id").attr('required', true);
 
                     var label  = ` {{ Form::label('project', __('Project'),['class'=>'form-label']) }} {{ Form::select('project',$projects,$bill->category_id, array('class' => 'form-control','required'=>'required')) }}`
                     $(".bill_div").append(label);
@@ -569,16 +594,15 @@
                                 <div class="form-group col-md-6" id="account-box">
                                     <label class="require form-label">{{ __('Account Type') }}</label><x-required></x-required>
                                     <select class="form-control account_type {{ !empty($errors->first('account_type')) ? 'is-invalid' : '' }}"
-                                        name="account_type" required id="account_type" disabled>
+                                        name="account_type" required id="account_type">
                                         <option value="">{{ __('Select Account Type') }}</option>
                                         @if (module_is_active('Account'))
-                                            <option value="Accounting">{{ __('Accounting') }}</option>
+                                        <option value="Accounting" @if ($bill->account_type =='Accounting') selected @endif >{{ __('Accounting') }}</option>
                                         @endif
                                         @if (module_is_active('Taskly'))
-                                            <option value="Projects">{{ __('Projects') }}</option>
+                                        <option value="Projects" @if ($bill->account_type =='Projects') selected @endif >{{ __('Projects') }}</option>
                                         @endif
                                     </select>
-                                    <input type="hidden" name="account_type" value="{{ $bill->account_type ?? '' }}">
                                 </div>
                                 <div class="form-group col-md-6">
                                     @if (module_is_active('Account'))
@@ -674,29 +698,6 @@
                                         </div>
                                     </div>
                                 @endif
-                                <div class="form-group expense_account_div col-md-6">
-                                    {{ Form::label('expense_chartaccount_id', __('Expense Account'),['class'=>'form-label']) }}
-                                    <select name="expense_chartaccount_id" class="form-control">
-                                        <option value="">Select Chart of Account</option>
-                                        @foreach ($expenseChartAccounts as $typeName => $subtypes)
-                                            <optgroup label="{{ $typeName }}">
-                                                @foreach ($subtypes as $subtypeId => $subtypeData)
-                                                    <option disabled style="color: #000; font-weight: bold;">{{ $subtypeData['account_name'] }}</option>
-                                                    @foreach ($subtypeData['chart_of_accounts'] as $chartOfAccount)
-                                                        <option value="{{ $chartOfAccount['id'] }}" {{ $chartOfAccount['id'] == $bill->account_id ? 'selected' : ''}}>
-                                                            &nbsp;&nbsp;&nbsp;{{ $chartOfAccount['account_name'] }}
-                                                        </option>
-                                                        @foreach ($subtypeData['subAccounts'] as $subAccount)
-                                                            @if ($chartOfAccount['id'] == $subAccount['parent'])
-                                                            <option value="{{ $subAccount['id'] }}" class="ms-5" {{ $subAccount['id'] == $bill->account_id ? 'selected' : ''}}> &nbsp; &nbsp;&nbsp;&nbsp; {{' - '. $subAccount['account_name'] }}</option>
-                                                            @endif
-                                                        @endforeach
-                                                    @endforeach
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    </select>
-                                </div>
                                 @if(module_is_active('CustomField') && !$customFields->isEmpty())
                                     <div class="col-md-12">
                                         <div class="tab-pane fade show" id="tab-2" role="tabpanel">

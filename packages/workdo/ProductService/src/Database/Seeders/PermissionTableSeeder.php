@@ -23,7 +23,6 @@ class PermissionTableSeeder extends Seeder
             'product&service manage',
             'product&service create',
             'product&service edit',
-            'product&service show',
             'product&service delete',
             'product&service import',
             'unit manage',

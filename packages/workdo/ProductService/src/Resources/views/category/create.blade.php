@@ -10,28 +10,26 @@
             <input type="hidden" value="{{$types}}" name="type">
         </div>
         @if($types  != 0)
-            <div class="form-group col-md-12">
-                {{ Form::label('chart_account_id', __('Account'),['class'=>'form-label']) }}
-                <select name="chart_account_id" class="form-control" required="required">
-                    @foreach ($chartAccounts as $key => $chartAccount)
-                        <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
-                        @foreach ($subAccounts as $subAccount)
-                            @if ($key == $subAccount['account'])
-                                <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp; {{ $subAccount['code'] }} - {{ $subAccount['name'] }}</option>
-                            @endif
-                        @endforeach
+        <div class="form-group col-md-12">
+            {{ Form::label('chart_account_id', __('Account'),['class'=>'form-label']) }}
+            <select name="chart_account_id" class="form-control" required="required">
+                @foreach ($chartAccounts as $key => $chartAccount)
+                    <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
+                    @foreach ($subAccounts as $subAccount)
+                        @if ($key == $subAccount['account'])
+                            <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp; {{ $subAccount['code'] }} - {{ $subAccount['name'] }}</option>
+                        @endif
                     @endforeach
-                </select>
-            </div>
+                @endforeach
+            </select>
+        </div>
         @endif
         <div class="form-group col-md-12">
             {{ Form::label('color', __('Category Color'), ['class' => 'form-label']) }}
             {{ Form::color('color', '', ['class' => 'form-control jscolor']) }}
             <small>{{ __('For chart representation') }}</small>
         </div>
-        @if($types == 0 && module_is_active('RestaurantMenu'))
-            @stack('items_image')
-        @endif
+        @stack('items_image')
     </div>
 </div>
 <div class="modal-footer">

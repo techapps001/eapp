@@ -2,5 +2,5 @@
 
 return [
     'system' => 'WorkDo Dash SaaS',
-    'system_version' => '6.4',
+    'system_version' => '6.3',
 ];

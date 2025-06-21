@@ -92,9 +92,19 @@
                                             @endif
                                         </td>
 
+                                        @if ($invoice->invoice_module == 'childcare')
 
-                                        <td>{{ currency_format_with_sym($invoice->getTotal()) }}</td>
-                                        <td>{{ currency_format_with_sym($invoice->getDue()) }}</td>
+                                            <td>{{ currency_format_with_sym($invoice->getChildTotal()) }}</td>
+                                        @else
+                                            <td>{{ currency_format_with_sym($invoice->getTotal()) }}</td>
+                                        @endif
+
+                                        @if ($invoice->invoice_module == 'childcare')
+
+                                            <td>{{ currency_format_with_sym($invoice->getChildDue()) }}</td>
+                                        @else
+                                            <td>{{ currency_format_with_sym($invoice->getDue()) }}</td>
+                                        @endif
 
                                         <td>
                                             @if ($invoice->status == 0)

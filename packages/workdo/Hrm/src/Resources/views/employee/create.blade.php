@@ -173,16 +173,17 @@
                                                                     id="document[{{ $document->id }}]"
                                                                     data-filename="{{ $document->id . '_filename' }}"
                                                                     @if ($document->is_required == 1) data-key="{{ $key }}" required @endif
-                                                                    onchange="previewFile(this, '{{ $key }}')">
+                                                                    onchange="document.getElementById('{{ 'blah' . $key }}').src = window.URL.createObjectURL(this.files[0])">
                                                                 <hr>
                                                             </label>
                                                         </div>
                                                     </div>
                                                     <div class="float-right col-3">
-                                                        <img id="preview_{{ $key }}" style="margin-left: 15px;"
-                                                            src="{{ asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}"
-                                                            alt="your image" width="120" height="100" class="rounded" />
+                                                        <img id="{{ 'blah' . $key }}" style="margin-left: 15px;"
+                                                        src="{{ asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}"
+                                                        alt="your image" width="120" height="100" class="rounded" />
                                                     </div>
+
                                                 </div>
                                             </div>
                                         @endforeach
@@ -389,7 +390,7 @@
 @push('scripts')
     <script src="{{ asset('js/jquery-ui.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/dropzone-amd-module.min.js') }}"></script>
-
+     
     <script type="text/javascript">
         $(document).on('change', '#branch_id', function() {
             var branch_id = $(this).val();
@@ -470,23 +471,5 @@
                     $('#personal-details-tab').addClass('show active');
         });
 
-    </script>
-    <script>
-        function previewFile(input, key) {
-            const file = input.files[0];
-            const preview = document.getElementById('preview_' + key);
-
-            if (!file) return;
-
-            const fileType = file.type;
-
-            if (fileType === 'application/pdf') {
-                preview.src = "{{ asset('images/folder.png') }}";
-            } else if (fileType.startsWith('image/')) {
-                preview.src = URL.createObjectURL(file);
-            } else {
-                preview.src = "{{ asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}";
-            }
-        }
     </script>
 @endpush

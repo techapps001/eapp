@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('proposals') && !Schema::hasColumn('proposals', 'proposal_template')) {
-            Schema::table('proposals', function (Blueprint $table) {
+        Schema::table('proposals', function (Blueprint $table) {
+            if (!Schema::hasColumn('proposals', 'proposal_template')) {
                 $table->string('proposal_template')->after('proposal_module')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**

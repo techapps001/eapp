@@ -19,7 +19,6 @@ class PermissionTableSeeder extends Seeder
                 'bank account manage',
                 'bank account create',
                 'bank account edit',
-                'bank account show',
                 'bank account delete',
                 'bank transfer manage',
                 'bank transfer create',

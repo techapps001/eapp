@@ -24,12 +24,9 @@ class CreditNoteDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rawColumn = ['credit_id', 'invoice', 'date','amount','status','description'];
+        $rawColumn = ['invoice', 'date', 'customer', 'amount','status','description'];
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('credit_id', function (CustomerCreditNotes $customcreditNote) {
-                return ' <a href="#" class="btn btn-outline-primary">' . CustomerCreditNotes::creditNumberFormat($customcreditNote->credit_id) . '</a>';
-            })
             ->editColumn('invoice', function (CustomerCreditNotes $customcreditNote) {
                 if (\Laratrust::hasPermission('invoice show')) {
                     $url = route('invoice.show', \Crypt::encrypt($customcreditNote->invoice));
@@ -46,16 +43,20 @@ class CreditNoteDataTable extends DataTable
                 return isset($customcreditNote->description) ? $customcreditNote->description : '--';
             })
 
+            ->editColumn('customer', function (CustomerCreditNotes $customcreditNote) {
+                return !empty($customcreditNote->custom_customer) ? $customcreditNote->custom_customer->name : '--';
+            })
+
             ->editColumn('amount', function (CustomerCreditNotes $customcreditNote) {
                 return currency_format_with_sym($customcreditNote->amount);
             })
             ->editColumn('status', function (CustomerCreditNotes $customcreditNote) {
                 if ($customcreditNote->status == 0) {
-                    $class = 'bg-warning';
+                    $class = 'bg-primary';
                 } elseif ($customcreditNote->status == 1) {
                     $class = 'bg-info';
                 } elseif ($customcreditNote->status == 2) {
-                    $class = 'bg-primary';
+                    $class = 'bg-secondary';
                 }
                 return '<span class="badge ' . $class . ' p-2 px-3">' . CustomerCreditNotes::$statues[$customcreditNote->status] . '</span>';
             })
@@ -67,6 +68,12 @@ class CreditNoteDataTable extends DataTable
                 } elseif (stripos('Fully Used', $keyword) !== false) {
                     $query->orWhere('customer_credit_notes.status', 2);
                 }
+            });
+
+            $dataTable->filterColumn('customer', function ($query, $keyword) {
+                $query->whereHas('custom_customer', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%");
+                });
             });
 
 
@@ -85,20 +92,10 @@ class CreditNoteDataTable extends DataTable
      */
     public function query(CustomerCreditNotes $model)
     {
-        if(Auth::user()->type == 'company') {
-            $customcreditNotes = $model->whereHas('invoices', function ($query) {
-                $query->where('workspace', getActiveWorkSpace());
-            })->with(['custom_customer','invoices']);
-            return $customcreditNotes;
-        }
-        else {
-            $customcreditNotes = $model->whereHas('invoices', function ($query) {
-                $query->where('user_id', Auth::user()->id);
-                $query->where('workspace', getActiveWorkSpace());
-            })->with(['custom_customer','invoices']);
-            return $customcreditNotes;
-        }
-        
+        $customcreditNotes = $model->whereHas('invoices', function ($query) {
+            $query->where('workspace', getActiveWorkSpace());
+        })->with(['custom_customer','invoices']);
+        return $customcreditNotes;
     }
 
     /**
@@ -217,8 +214,8 @@ class CreditNoteDataTable extends DataTable
         $column = [
             Column::make('id')->searchable(false)->visible(false)->exportable(false)->printable(false),
             Column::make('No')->title(__('No'))->data('DT_RowIndex')->name('DT_RowIndex')->searchable(false)->orderable(false),
-            Column::make('credit_id')->title(__('Credit Note'))->searchable(false),
             Column::make('invoice')->title(__('Invoice'))->searchable(false),
+            Column::make('customer')->title(__('Customer')),
             Column::make('date')->title(__('Date')),
             Column::make('amount')->title(__('Amount')),
             Column::make('description')->title(__('Description')),

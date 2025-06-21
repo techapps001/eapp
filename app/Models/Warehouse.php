@@ -64,7 +64,7 @@ class Warehouse extends Model
                     }
                     foreach($default_warehouses as $default_warehouse)
                     {
-                        $warehouse= Warehouse::where('created_by',$company->id)->where('workspace',$WorkSpace->id)->first();
+                        $warehouse= Warehouse::where('created_by',$company_id)->where('workspace',$WorkSpace->id)->first();
                         if($warehouse==null){
                             $new = new Warehouse();
                             $new->name = $default_warehouse['name'];

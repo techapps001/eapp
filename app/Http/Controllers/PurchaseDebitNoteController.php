@@ -10,7 +10,6 @@ use App\Models\Purchase;
 use App\Models\PurchaseDebitNote;
 use Workdo\Account\Entities\Vender;
 use App\Traits\CreditDebitNoteBalance;
-use Workdo\Account\Entities\CustomerDebitNotes;
 
 class PurchaseDebitNoteController extends Controller
 {
@@ -36,13 +35,7 @@ class PurchaseDebitNoteController extends Controller
         {
             $purchaseDue = Purchase::where('id', $purchase_id)->first();
             $vendor      = Vender::where('user_id', $purchaseDue->vender_id)->first();
-            $debitNotes = CustomerDebitNotes::with('custom_vendor')->select('customer_debit_notes.*')
-            ->leftJoin('purchases', 'customer_debit_notes.bill', '=', 'purchases.id')
-            ->where('purchases.user_id' , $purchaseDue->user_id)
-            ->where('customer_debit_notes.type' ,'purchase')
-            ->where('purchases.workspace', getActiveWorkSpace())->where('customer_debit_notes.status','!=','2')->get()->pluck('debit_id' , 'id');
-            
-            return view('debitNote.create', compact('vendor', 'purchase_id' , 'debitNotes'));
+            return view('debitNote.create', compact('vendor', 'purchase_id'));
         }
         else
         {
@@ -72,6 +65,13 @@ class PurchaseDebitNoteController extends Controller
                 return redirect()->back()->with('error', $messages->first());
             }
             $purchaseDue = Purchase::where('id', $purchase_id)->first();
+            $vendor  = Vender::where('user_id', $purchaseDue->user_id)->first();
+
+            if($request->amount > $vendor->debit_note_balance)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($vendor->debit_note_balance) . ' debit limit of this bill.');
+            }
+
             if($request->amount > $purchaseDue->getDue())
             {
                 return redirect()->back()->with('error', 'Maximum ' . currency_format_with_sym($purchaseDue->getDue()) . ' credit limit of this purchase.');
@@ -88,14 +88,14 @@ class PurchaseDebitNoteController extends Controller
 
             $debit              = new PurchaseDebitNote();
             $debit->purchase    = $purchase_id;
-            $debit->debit_note  = $request->debit_note;
-            $debit->vendor      = 0;
+            $debit->vendor      = $vendor->id;
             $debit->date        = $request->date;
             $debit->amount      = $request->amount;
             $debit->description = $request->description;
             $debit->save();
 
-            $this->updateDebitNoteStatus($debit);
+            // store debitnote balance vendor's table
+            $this->updateBalance('vender', $vendor->id, $request->amount, 'debit');
 
             return redirect()->back()->with('success', __('The debit note has been created successfully'));
         }
@@ -161,6 +161,13 @@ class PurchaseDebitNoteController extends Controller
 
             $debit = PurchaseDebitNote::find($debitNote_id);
 
+            $vendor  = Vender::where('user_id', $purchaseDue->user_id)->first();
+
+            if($request->amount > $vendor->debit_note_balance + $debit->amount)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($vendor->debit_note_balance + $debit->amount) . ' debit limit of this purchase.');
+            }
+
             if($request->amount > $purchaseDue->getDue() + $debit->amount)
             {
                 return redirect()->back()->with('error', 'Maximum ' . currency_format_with_sym($purchaseDue->getDue() + $debit->amount) . ' credit limit of this purchase.');
@@ -175,12 +182,17 @@ class PurchaseDebitNoteController extends Controller
                 $purchaseDue->save();
             }
 
+
+            // store creditnote customer's table
+            $this->updateBalance('vender', $vendor->id, $debit->amount, 'credit');
+
             $debit->date        = $request->date;
             $debit->amount      = $request->amount;
             $debit->description = $request->description;
             $debit->save();
 
-            $this->updateDebitNoteStatus($debit);
+            // store debitnote balance vendor's table
+            $this->updateBalance('vender', $vendor->id, $request->amount, 'debit');
 
             return redirect()->back()->with('success', __('The debit note details are updated successfully'));
         }
@@ -213,7 +225,9 @@ class PurchaseDebitNoteController extends Controller
                 }
                 $purchase->save();
 
-                $this->updateDebitNoteStatus($debitNote , 'delete');
+                // store debitnote balance vendor's table
+                $this->updateBalance('vender', $debitNote->vendor, $debitNote->amount, 'credit');
+
                 $debitNote->delete();
 
                 return redirect()->back()->with('success', __('The debit note has been deleted.'));

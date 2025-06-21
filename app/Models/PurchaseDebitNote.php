@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Workdo\Account\Entities\Customer;
-use Workdo\Account\Entities\CustomerDebitNotes;
 use Workdo\Account\Entities\Vender;
 
 class PurchaseDebitNote extends Model
@@ -46,10 +45,5 @@ class PurchaseDebitNote extends Model
                 $user->save();
             }
         }
-    }
-
-    public function debitNote()
-    {
-        return $this->hasOne(CustomerDebitNotes::class, 'id', 'debit_note');
     }
 }

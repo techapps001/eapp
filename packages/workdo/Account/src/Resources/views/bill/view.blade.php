@@ -222,7 +222,7 @@
                     <div class="me-2 all-button-box">
                         <a href="#" data-url="{{ route('bill.debit.note', $bill->id) }}" data-ajax-popup="true"
                             data-title="{{ __('Apply Debit Note') }}" class="btn btn-sm btn-primary">
-                            {{ __('Apply Debit Note') }}
+                            {{ __('Add Debit Note') }}
                         </a>
                     </div>
                 @endif
@@ -239,9 +239,10 @@
                 </div>
             </div>
         @endif
+        </div>
     @endif
 
-    <div class="row mt-3">
+    <div class="row">
         <div class="col-lg-12">
             <div class="tab-content" id="pills-tabContent">
                 <div class="tab-pane fade active show" id="bill" role="tabpanel"
@@ -783,7 +784,6 @@
                                 <table class="table mb-0 pc-dt-simple" id="debit-note">
                                     <thead>
                                         <tr>
-                                            <th class="text-dark">{{ __('Debit Note') }}</th>
                                             <th class="text-dark">{{ __('Date') }}</th>
                                             <th class="text-dark">{{ __('Amount') }}</th>
                                             <th class="text-dark">{{ __('Description') }}</th>
@@ -794,7 +794,6 @@
                                     </thead>
                                     @forelse($bill->debitNote as $key =>$debitNote)
                                         <tr>
-                                            <td><a href="#" class="btn btn-outline-primary">{{ !empty($debitNote->debitNote) ? \Workdo\Account\Entities\CustomerDebitNotes::debitNumberFormat($debitNote->debitNote->debit_id) : '-' }}</a></td>
                                             <td>{{ company_date_formate($debitNote->date) }}</td>
                                             <td>{{ currency_format_with_sym($debitNote->amount) }}</td>
                                             <td>{{ isset($debitNote->description) ? $debitNote->description : '-' }}</td>

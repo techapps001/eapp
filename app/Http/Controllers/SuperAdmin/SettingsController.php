@@ -21,8 +21,8 @@ class SettingsController extends Controller
         $timezones = config('timezones');
 
         $ai_key_settings = ApikeySetiings::get();
-        $models = getAiModelName();
-        return view('super-admin.settings.index', compact('settings', 'file_type', 'timezones', 'ai_key_settings','models'));
+
+        return view('super-admin.settings.index', compact('settings', 'file_type', 'timezones', 'ai_key_settings'));
     }
 
     /**

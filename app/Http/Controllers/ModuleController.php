@@ -114,7 +114,7 @@ class ModuleController extends Controller
                     $addon->module = $data['name'];
                     $addon->name = $data['alias'];
                     $addon->monthly_price = $data['monthly_price'] ?? 0;
-                    $addon->yearly_price = $data['yearly_price'] ?? 0;
+                    $addon->yearly_price = $data['monthly_price'] ?? 0;
                     $addon->package_name = $data['package_name'];
                     $addon->save();
                     Module::moduleCacheForget($request->name);

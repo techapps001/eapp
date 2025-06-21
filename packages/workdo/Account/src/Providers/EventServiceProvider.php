@@ -8,112 +8,44 @@ use App\Events\CompanyMenuEvent;
 use App\Events\CompanySettingEvent;
 use App\Events\CompanySettingMenuEvent;
 use App\Events\CreatePaymentInvoice;
-use App\Events\CreatePaymentPurchase;
 use App\Events\DefaultData;
-use App\Events\DestroyInvoice;
-use App\Events\DestroyPurchase;
 use App\Events\GivePermissionToRole;
-use App\Events\PaymentDestroyInvoice;
-use App\Events\PaymentDestroyPurchase;
-use App\Events\ProductDestroyInvoice;
 use App\Events\SentInvoice;
-use App\Events\SentPurchase;
 use App\Events\UpdateInvoice;
-use App\Events\UpdatePurchase;
 use Workdo\Account\Listeners\CompanyMenuListener;
 use Workdo\Account\Listeners\CompanySettingListener;
 use Workdo\Account\Listeners\CompanySettingMenuListener;
 use Workdo\Account\Listeners\InvoiceBalanceTransfer;
 use Workdo\AamarPay\Events\AamarPaymentStatus;
-use Workdo\Account\Events\CreateCustomerCreditNote;
-use Workdo\Account\Events\CreateCustomerDebitNote;
-use Workdo\Account\Events\CreatePayment;
 use Workdo\Account\Events\CreatePaymentBill;
-use Workdo\Account\Events\CreateRevenue;
-use Workdo\Account\Events\DestroyBill;
-use Workdo\Account\Events\DestroyCustomerCreditNote;
-use Workdo\Account\Events\DestroyCustomerDebitNote;
-use Workdo\Account\Events\DestroyPayment;
-use Workdo\Account\Events\DestroyPurchaseProduct;
-use Workdo\Account\Events\DestroyRevenue;
-use Workdo\Account\Events\PaymentDestroyBill;
-use Workdo\Account\Events\ProductDestroyBill;
 use Workdo\Account\Events\SentBill;
 use Workdo\Account\Events\UpdateBill;
-use Workdo\Account\Events\UpdateCustomerCreditNote;
-use Workdo\Account\Events\UpdateCustomerDebitNote;
-use Workdo\Account\Events\UpdatePayment;
-use Workdo\Account\Events\UpdateRevenue;
-use Workdo\Account\Listeners\BillDestroy;
 use Workdo\Account\Listeners\BillPaymentCreate;
-use Workdo\Account\Listeners\BillPaymentDestroy;
-use Workdo\Account\Listeners\BillProductDestroy;
 use Workdo\Account\Listeners\BillSent;
 use Workdo\Account\Listeners\BillUpdate;
 use Workdo\Account\Listeners\CreateProductLis;
-use Workdo\Account\Listeners\CustomerCreditNoteCreate;
-use Workdo\Account\Listeners\CustomerCreditNoteDestroy;
-use Workdo\Account\Listeners\CustomerCreditNoteUpdate;
-use Workdo\Account\Listeners\CustomerDebitNoteCreate;
-use Workdo\Account\Listeners\CustomerDebitNoteDestroy;
-use Workdo\Account\Listeners\CustomerDebitNoteUpdate;
 use Workdo\Account\Listeners\DataDefault;
 use Workdo\Account\Listeners\GiveRoleToPermission;
-use Workdo\Account\Listeners\InvoiceDestroy;
-use Workdo\Account\Listeners\InvoiceOnlinePayamentCreate;
 use Workdo\Account\Listeners\InvoicePaymentCreate;
-use Workdo\Account\Listeners\InvoicePaymentDestroy;
-use Workdo\Account\Listeners\InvoiceProductDestroy;
 use Workdo\Account\Listeners\InvoiceSent;
 use Workdo\Account\Listeners\InvoiceUpdate;
-use Workdo\Account\Listeners\PaymentCreate;
-use Workdo\Account\Listeners\PaymentDestroy;
-use Workdo\Account\Listeners\PaymentUpdate;
-use Workdo\Account\Listeners\PurchaseDestroy;
-use Workdo\Account\Listeners\PurchasePaymentCreate;
-use Workdo\Account\Listeners\PurchasePaymentDestroy;
-use Workdo\Account\Listeners\PurchaseProductDestroy;
-use Workdo\Account\Listeners\PurchaseSent;
-use Workdo\Account\Listeners\PurchaseUpdate;
-use Workdo\Account\Listeners\RetainerPaymentCreate;
-use Workdo\Account\Listeners\RevenueCreate;
-use Workdo\Account\Listeners\RevenueDestroy;
-use Workdo\Account\Listeners\RevenueUpdate;
 use Workdo\Account\Listeners\UpdateProductLis;
 use Workdo\AuthorizeNet\Events\AuthorizeNetStatus;
 use Workdo\Benefit\Events\BenefitPaymentStatus;
-use Workdo\BlueSnap\Events\BlueSnapPaymentStatus;
-use Workdo\BTCPay\Events\BTCPayPaymentStatus;
 use Workdo\Cashfree\Events\CashfreePaymentStatus;
-use Workdo\Checkout\Events\CheckoutPaymentStatus;
-use Workdo\CinetPay\Events\CinetPayPaymentStatus;
-use Workdo\Coin\Events\CoinPaymentStatus;
 use Workdo\Coingate\Events\CoingatePaymentStatus;
-use Workdo\CyberSource\Events\CybersourceStatus;
 use Workdo\DPOPay\Events\DPOPayPaymentStatus;
-use Workdo\Easebuzz\Events\EasebuzzPaymentStatus;
-use Workdo\Esewa\Events\EsewaPaymentStatus;
-use Workdo\Fatora\Events\FatoraPaymentStatus;
 use Workdo\Fedapay\Events\FedapayPaymentStatus;
 use Workdo\Flutterwave\Events\FlutterwavePaymentStatus;
 use Workdo\Iyzipay\Events\IyzipayPaymentStatus;
 use Workdo\Khalti\Events\KhaltiPaymentStatus;
-use Workdo\LinePay\Events\LinePayPaymentStatus;
 use Workdo\Mercado\Events\MercadoPaymentStatus;
 use Workdo\Midtrans\Events\MidtransPaymentStatus;
 use Workdo\Mollie\Events\MolliePaymentStatus;
-use Workdo\Moneris\Events\MonerisPaymentStatus;
-use Workdo\Monnify\Events\MonnifyPaymentStatus;
-use Workdo\MyFatoorah\Events\MyFatoorahStatus;
-use Workdo\Nepalste\Events\NepalstePaymentStatus;
-use Workdo\NMI\Events\NMIPatmentStats;
-use Workdo\Ozow\Events\OzowPaymentStatus;
 use Workdo\Paddle\Events\PaddlePaymentStatus;
 use Workdo\PaiementPro\Events\PaiementProPaymentStatus;
 use Workdo\Payfast\Events\PayfastPaymentStatus;
-use Workdo\PayFort\Events\PayfortPaymentStatus;
 use Workdo\PayHere\Events\PayHerePaymentStatus;
-use Workdo\Paynow\Events\PaynowPaymentStatus;
 use Workdo\Paypal\Events\PaypalPaymentStatus;
 use Workdo\Paystack\Events\PaystackPaymentStatus;
 use Workdo\PayTab\Events\PaytabPaymentStatus;
@@ -131,15 +63,7 @@ use Workdo\Toyyibpay\Events\ToyyibpayPaymentStatus;
 use Workdo\Xendit\Events\XenditPaymentStatus;
 use Workdo\YooKassa\Events\YooKassaPaymentStatus;
 use Workdo\Paypay\Events\PaypayPaymentStatus;
-use Workdo\PayU\Events\PayUPaymentStatus;
-use Workdo\PeachPayment\Events\PeachPaymentStatus;
-use Workdo\Pesapal\Events\PesapalPaymentStatus;
-use Workdo\Retainer\Events\RetainerConvertToInvoice;
-use Workdo\SenangPay\Events\SenangPayPaymentStatus;
 use Workdo\Sofort\Events\SofortPaymentStatus;
-use Workdo\SSLCommerz\Events\SSLCommerzPaymentStatus;
-use Workdo\TwoCheckout\Events\TwoCheckoutPaymentStatus;
-use Workdo\UddoktaPay\Events\UddoktaPayStatus;
 
 class EventServiceProvider extends Provider
 {
@@ -166,148 +90,106 @@ class EventServiceProvider extends Provider
         ],
 
         StripePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaypalPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         FlutterwavePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaystackPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         RazorpayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         MolliePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PayfastPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         YooKassaPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaytabPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         SSpayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         ToyyibpayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         SkrillPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         IyzipayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaytrPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         AamarPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         BenefitPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         CashfreePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         CoingatePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         MercadoPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaytmPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaddlePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         MidtransPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         XenditPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         TapPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         KhaltiPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PhonePePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         AuthorizeNetStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PayHerePaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaiementProPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         FedapayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         BankTransferPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         PaypayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         DPOPayPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         SofortPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        SSLCommerzPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        PaynowPaymentStatus::class => [
-           InvoiceBalanceTransfer::class,
-           InvoiceOnlinePayamentCreate::class
+            InvoiceBalanceTransfer::class
         ],
         SentInvoice::class =>[
             InvoiceSent::class
@@ -332,174 +214,6 @@ class EventServiceProvider extends Provider
         ],
         UpdateProduct::class =>[
             UpdateProductLis::class
-        ],
-        PeachPaymentStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        OzowPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        CybersourceStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        SenangPayPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        NepalstePaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        TwoCheckoutPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        EasebuzzPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        PayUPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        FatoraPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        NMIPatmentStats::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        MonerisPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        CinetPayPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        CheckoutPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        BlueSnapPaymentStatus::class => [
-           InvoiceBalanceTransfer::class,
-           InvoiceOnlinePayamentCreate::class
-        ],
-        BTCPayPaymentStatus::class => [
-          InvoiceBalanceTransfer::class,
-          InvoiceOnlinePayamentCreate::class
-        ],
-        PesapalPaymentStatus::class => [
-           InvoiceBalanceTransfer::class,
-           InvoiceOnlinePayamentCreate::class
-        ],
-        CoinPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        UddoktaPayStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        MyFatoorahStatus::class =>[
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        MonnifyPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        LinePayPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        PayfortPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        EsewaPaymentStatus::class => [
-            InvoiceBalanceTransfer::class,
-            InvoiceOnlinePayamentCreate::class
-        ],
-        PaymentDestroyInvoice::class => [
-            InvoicePaymentDestroy::class
-        ],
-        DestroyInvoice::class => [
-            InvoiceDestroy::class
-        ],
-        ProductDestroyInvoice::class => [
-            InvoiceProductDestroy::class
-        ],
-        CreateCustomerCreditNote::class => [
-            CustomerCreditNoteCreate::class
-        ],
-        UpdateCustomerCreditNote::class => [
-            CustomerCreditNoteUpdate::class
-        ],
-        DestroyCustomerCreditNote::class => [
-            CustomerCreditNoteDestroy::class
-        ],
-        RetainerConvertToInvoice::class => [
-            InvoiceSent::class,
-            RetainerPaymentCreate::class
-        ],
-        ProductDestroyBill::class => [
-            BillProductDestroy::class
-        ],
-        DestroyBill::class => [
-            BillDestroy::class
-        ],
-        PaymentDestroyBill::class => [
-            BillPaymentDestroy::class
-        ],
-        CreateCustomerDebitNote::class => [
-            CustomerDebitNoteCreate::class
-        ],
-        UpdateCustomerDebitNote::class => [
-            CustomerDebitNoteUpdate::class
-        ],
-        DestroyCustomerDebitNote::class => [
-            CustomerDebitNoteDestroy::class
-        ],
-        SentPurchase::class => [
-            PurchaseSent::class
-        ],
-        UpdatePurchase::class => [
-            PurchaseUpdate::class
-        ],
-        DestroyPurchase::class => [
-            PurchaseDestroy::class
-        ],
-        DestroyPurchaseProduct::class => [
-            PurchaseProductDestroy::class
-        ],
-        CreatePaymentPurchase::class => [
-            PurchasePaymentCreate::class
-        ],
-        PaymentDestroyPurchase::class => [
-            PurchasePaymentDestroy::class
-        ],
-        CreateRevenue::class => [
-            RevenueCreate::class
-        ],
-        DestroyRevenue::class => [
-            RevenueDestroy::class
-        ],
-        UpdateRevenue::class => [
-            RevenueUpdate::class
-        ],
-        CreatePayment::class => [
-            PaymentCreate::class
-        ],
-        DestroyPayment::class => [
-            PaymentDestroy::class
-        ],
-        UpdatePayment::class => [
-            PaymentUpdate::class
         ]
     ];
 

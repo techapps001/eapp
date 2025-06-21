@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('leads') && !Schema::hasColumn('leads', 'follow_up_date'))
+        if (!Schema::hasColumn('leads', 'follow_up_date'))
         {
             Schema::table('leads', function (Blueprint $table) {
                 $table->date('follow_up_date')->nullable()->after('is_converted');

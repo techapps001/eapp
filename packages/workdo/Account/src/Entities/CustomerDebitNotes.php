@@ -20,7 +20,7 @@ class CustomerDebitNotes extends Model
 
     public function custom_vendor()
     {
-        return $this->hasOne(\Workdo\Account\Entities\Vender::class, 'id', 'vendor');
+        return $this->hasOne(\Workdo\Account\Entities\Vender::class, 'vendor_id', 'vendor');
     }
 
     public function bill_number()
@@ -28,34 +28,9 @@ class CustomerDebitNotes extends Model
         return $this->hasOne(\Workdo\Account\Entities\Bill::class, 'id', 'bill');
     }
 
-    public function purchase_number()
-    {
-        return $this->hasOne(\App\Models\Purchase::class, 'id', 'bill');
-    }
-
-    public function usedDebitNote($debitNote)
-    {
-        if($debitNote->type == 'bill') {
-            return $this->hasMany(\Workdo\Account\Entities\DebitNote::class, 'debit_note', 'id')->sum('amount');
-        }
-        else {
-            return $this->hasMany(\App\Models\PurchaseDebitNote::class, 'debit_note', 'id')->sum('amount');
-        }
-    }
-
-    public static function debitNumberFormat($number)
-    {
-        return '#DN' . sprintf("%05d", $number);
-    }
-    
     public static $statues = [
         'Pending',
         'Partially Used',
         'Fully Used',
-    ];
-
-    public static $debit_type = [
-        'Bill',
-        'Purchase',
     ];
 }

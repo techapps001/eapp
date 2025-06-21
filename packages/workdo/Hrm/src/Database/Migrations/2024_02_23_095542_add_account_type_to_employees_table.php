@@ -13,11 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('employees') && !Schema::hasColumn('employees', 'account_type')) {
-            Schema::table('employees', function (Blueprint $table) {
+        Schema::table('employees', function (Blueprint $table) {
+            if (!Schema::hasColumn('employees', 'account_type')) {
                 $table->integer('account_type')->after('salary_type')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**
@@ -27,6 +27,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('employees', function (Blueprint $table) {});
+        Schema::table('employees', function (Blueprint $table) {
+
+        });
     }
 };

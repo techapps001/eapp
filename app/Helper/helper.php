@@ -61,11 +61,12 @@ if (!function_exists('generateMenu')) {
         foreach ($grouped as $category => $menuItems) {
             $company_settings = getCompanyAllSetting();
             if (!empty($company_settings['category_wise_sidemenu']) && $company_settings['category_wise_sidemenu'] == 'on') {
-                $icon = isset(categoryIcon()[$category]) ? categoryIcon()[$category] : 'home';
-                $html .= '<li class="dash-item dash-caption">
-                        <label>' . $category . '</label>
-                        <i class="ti ti-' . $icon . '"></i>
-                      </li>';
+                $icon = categoryIcon()[$category] ?? 'home';
+
+                $html .= '<li class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">';
+                $html .= '<iconify-icon icon="' . $icon . '" class="w-4 h-4 text-gray-400"></iconify-icon>';
+                $html .= '<span>' . $category . '</span>';
+                $html .= '</li>';
             }
 
             $html .= generateSubMenu($menuItems, $parent);
@@ -74,6 +75,7 @@ if (!function_exists('generateMenu')) {
         return $html;
     }
 }
+
 
 if (!function_exists('generateSubMenu')) {
     function generateSubMenu($menuItems, $parent = null)
@@ -90,33 +92,37 @@ if (!function_exists('generateSubMenu')) {
 
         foreach ($filteredItems as $item) {
             $hasChildren = hasChildren($menuItems, $item['name']);
-            if ($item['parent'] == null) {
-                $html .= '<li class="dash-item dash-hasmenu">';
-            } else {
-                $html .= '<li class="dash-item">';
-            }
-            $html .= '<a href="' . (!empty($item['route']) ? route($item['route']) : '#!') . '" class="dash-link">';
+            $route = !empty($item['route']) ? route($item['route']) : 'javascript:void(0)';
+            $title = __($item['title']);
+            $icon = !empty($item['icon']) ? $item['icon'] : 'home';
 
-            if ($item['parent'] == null) {
-                $html .= ' <span class="dash-micon"><i class="ti ti-' . $item['icon'] . '"></i></span>
-                <span class="dash-mtext">';
-            }
-            $html .= __($item['title']) . '</span>';
+            $html .= '<li class="' . ($hasChildren ? 'group relative' : '') . '">';
+
+            $html .= '<a href="' . $route . '" class="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition">
+                        <iconify-icon icon="' . $icon . '" class="w-5 h-5 mr-3 text-gray-500"></iconify-icon>
+                        <span>' . $title . '</span>';
 
             if ($hasChildren) {
-                $html .= '<span class="dash-arrow"> <i data-feather="chevron-right"></i> </span> </a>';
-                $html .= '<ul class="dash-submenu">';
+                $html .= '<svg class="w-4 h-4 ml-auto text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                          </svg>';
+            }
+
+            $html .= '</a>';
+
+            if ($hasChildren) {
+                $html .= '<ul class="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-4">';
                 $html .= generateSubMenu($menuItems, $item['name']);
                 $html .= '</ul>';
-            } else {
-                $html .= '</a>';
             }
 
             $html .= '</li>';
         }
+
         return $html;
     }
 }
+
 
 if (!function_exists('categoryIcon')) {
     function categoryIcon()
@@ -1770,24 +1776,5 @@ if (!function_exists('second_to_time')) {
         $s = $seconds % 60;
         $time = sprintf("%02d:%02d:%02d", $H, $i, $s);
         return $time;
-    }
-}
-
-// GPT
-if (!function_exists('getAiModelName')) {
-    function getAiModelName()
-    {
-        return [
-            'GPT-4 Series' => [
-                'gpt-4o' => 'GPT-4o',
-                'gpt-4-turbo' => 'GPT-4-Turbo',
-                'gpt-4' => 'GPT-4',
-                'gpt-4.1-nano' => 'GPT-4.1-Nano',
-            ],
-            'GPT-3.5 Series' => [
-                'gpt-3.5-turbo' => 'GPT-3.5-Turbo',
-                'gpt-3.5-turbo-instruct' => 'GPT-3.5-Turbo-Instruct',
-            ],
-        ];
     }
 }

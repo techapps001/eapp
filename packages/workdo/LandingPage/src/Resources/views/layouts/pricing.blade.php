@@ -733,7 +733,7 @@
 
             $(".planpricetext").text(formatCurrency(planprice,'{{ $currency_setting }}'));
             $(".workspace-price").text('( Per Work ' + formatCurrency(workspaceprice,'{{ $currency_setting }}') + ')');
-            $(".user-price").text('( {{ __('Per User') }} ' + formatCurrency(userprice,'{{ $currency_setting }}') + ')');
+            $(".user-price").text('( Per User ' + formatCurrency(userpricetext,'{{ $currency_setting }}') + ')');
             $(".userpricetext").text(formatCurrency(userpricetext,'{{ $currency_setting }}'));
             $(".workspacepricetext").text(formatCurrency(workspacepricetext,'{{ $currency_setting }}'));
 

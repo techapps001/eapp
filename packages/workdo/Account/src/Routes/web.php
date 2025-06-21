@@ -40,8 +40,6 @@ Route::group(['middleware' => ['web', 'auth', 'verified','PlanModuleCheck:Accoun
 
     // Transfer
     Route::resource('bank-transfer', TransferController::class);
-    Route::get('bank-transfer/get-opening-balance/{id}', [TransferController::class, 'getOpeningBalance'])->name('banktransfer.getOpeningBalance');
-
 
     // customer
     Route::resource('customer', CustomerController::class);
@@ -71,7 +69,6 @@ Route::group(['middleware' => ['web', 'auth', 'verified','PlanModuleCheck:Accoun
     Route::get('invoice/{id}/credit-note/edit/{cn_id}', [CreditNoteController::class, 'edit'])->name('invoice.edit.credit.note');
     Route::post('invoice/{id}/credit-note//{cn_id}', [CreditNoteController::class, 'update'])->name('invoice.edit.credit.updatenote');
     Route::delete('invoice/{id}/credit-note/delete/{cn_id}', [CreditNoteController::class, 'destroy'])->name('invoice.delete.credit.note');
-    Route::post('invoice/credit-note/price', [CreditNoteController::class, 'getPrice'])->name('credit-note.price');
 
     // revenue
     Route::resource('revenue', RevenueController::class);
@@ -84,23 +81,19 @@ Route::group(['middleware' => ['web', 'auth', 'verified','PlanModuleCheck:Accoun
     Route::get('invoice/{id}/custom-credit/edit/{cn_id}', [CustomerCreditNotesController::class, 'edit'])->name('invoice.edit.custom-credit');
     Route::post('invoice/{id}/custom-credit-note/edit/{cn_id}', [CustomerCreditNotesController::class, 'update'])->name('invoice.custom-note.edit');
     Route::delete('invoice/{id}/custom-credit/delete/{cn_id}', [CustomerCreditNotesController::class, 'destroy'])->name('invoice.custom-note.delete');
-    Route::post('credit-invoice/items', [CustomerCreditNotesController::class, 'getItems'])->name('credit-invoice.items');
-    Route::post('credit-invoice/itemprice', [CustomerCreditNotesController::class, 'getItemPrice'])->name('credit-invoice.itemprice');
+
 
     //customer debit note
 
     Route::get('debit-note', [CustomerDebitNotesController::class, 'index'])->name('debit.note');
     Route::get('custom-debit-note', [CustomerDebitNotesController::class, 'create'])->name('bill.custom.debit.note');
-    Route::post('custom-debit-note', [CustomerDebitNotesController::class, 'store'])->name('custom-debits.note');
+    Route::post('custom-debit-note', [CustomerDebitNotesController::class, 'store'])->name('custom-debits.note'); 
     Route::get('bill/{id}/custom-debit-note/edit/{cn_id}', [CustomerDebitNotesController::class, 'edit'])->name('bill.debit-custom.edit');
     Route::post('bill/debit-note/edit/{id}/{cn_id}', [CustomerDebitNotesController::class, 'update'])->name('bill.custom.edit');
     Route::delete('bill/custom-debit-note/delete/{id}/{cn_id}', [CustomerDebitNotesController::class, 'destroy'])->name('bill.delete.custom-debit');
-    Route::post('debit-bill/items', [CustomerDebitNotesController::class, 'getItems'])->name('debit-bill.items');
-    Route::post('debit-bill/itemprice', [CustomerDebitNotesController::class, 'getItemPrice'])->name('debit-bill.itemprice');
 
     // bill payment
     Route::resource('payment', PaymentController::class);
-    Route::get('payment-description/{id}', [PaymentController::class, 'description'])->name('payment.description');
     Route::post('bill-attechment/{id}', [BillController::class, 'billAttechment'])->name('bill.file.upload');
     Route::delete('bill-attechment/destroy/{id}', [BillController::class, 'billAttechmentDestroy'])->name('bill.attachment.destroy');
     Route::post('bill/vendors', [BillController::class, 'vendor'])->name('bill.vendor');
@@ -122,7 +115,6 @@ Route::group(['middleware' => ['web', 'auth', 'verified','PlanModuleCheck:Accoun
     Route::get('bill/{id}/debit-note/edit/{cn_id}', [DebitNoteController::class, 'edit'])->name('bill.edit.debit.note');
     Route::post('bill/{id}/debit-note/update/{cn_id}', [DebitNoteController::class, 'update'])->name('bill.edit.debit.updatenote');
     Route::delete('bill/{id}/debit-note/delete/{cn_id}', [DebitNoteController::class, 'destroy'])->name('bill.delete.debit.note');
-    Route::post('bill/debit-note/price', [DebitNoteController::class, 'getPrice'])->name('debit-note.price');
 
     // settig in account
     Route::post('/accounts-setting/store', [AccountController::class, 'setting'])->name('accounts.setting.save');

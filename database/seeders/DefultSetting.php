@@ -69,7 +69,6 @@ class DefultSetting extends Seeder
             ['Forint', 'HUF', 'Ft'],
             ['Kronur', 'ISK', 'kr'],
             ['Rupees', 'INR', 'Rs'],
-            ['Rupees', 'INR', '₹'],
             ['Rupiahs', 'IDR', 'Rp'],
             ['Rials', 'IRR', '﷼'],
             ['Pounds', 'IMP', '£'],
@@ -144,8 +143,6 @@ class DefultSetting extends Seeder
             ['Ugandan Shilling','UGX','UGX'],
             ['Kuwaiti Dinar','KWD','د.ك'],
             ['Tanzania Shilling','TZS','TSh'],
-            ['Romanian Lei','RON','lei'],
-            ['Jordanian Dinar','JOD','د.أ'],
         ];
 
         foreach ($currencys as  $currency) {

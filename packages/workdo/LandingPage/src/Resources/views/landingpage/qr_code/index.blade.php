@@ -20,21 +20,19 @@
     </div>
 @endsection
 
-@push('css')
-    <style>
-        /* landing-page qr-code */
-        .landing-page-qr .qr-code {
-        max-width: 300px;
-        width: 100%;
-        max-height: 300px;
-        height: 100%;
-    }
-    .landing-page-qr .qr-code img {
-        height: 100%;
-        width: 100%;
-    }
-    </style>
-@endpush
+<style>
+    /* landing-page qr-code */
+.landing-page-qr .qr-code {
+    max-width: 300px;
+    width: 100%;
+    max-height: 300px;
+    height: 100%;
+}
+.landing-page-qr .qr-code img {
+    height: 100%;
+    width: 100%;
+}
+</style>
 
 @section('content')
     <div class="row">

@@ -108,23 +108,23 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
-        if(Auth::user()->isAbleTo('roles edit') && $role->created_by == creatorId())
+        if(Auth::user()->isAbleTo('roles edit'))
         {
             $user = \Auth::user();
             $permissions = Permission::all()->pluck('name', 'id')->toArray();
             $modules = array_merge(['General','ProductService'],getshowModuleList());
-            return view('role.edit', compact('role', 'permissions','modules'));           
+            return view('role.edit', compact('role', 'permissions','modules'));
         }
         else
         {
-            return redirect()->back()->with('error', __('Permission denied.'));
+            return response()->json(['error' => __('Permission denied.')], 401);
         }
 
     }
 
     public function update(Request $request, Role $role)
     {
-        if(Auth::user()->isAbleTo('roles edit') && $role->created_by == creatorId())
+        if(Auth::user()->isAbleTo('roles edit'))
         {
             $validator = \Validator::make(
                 $request->all(), [
@@ -165,7 +165,7 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        if(Auth::user()->isAbleTo('roles delete') && $role->created_by == creatorId()) 
+        if(Auth::user()->isAbleTo('roles delete'))
         {
             if ($role->users->count() > 0) {
                 return redirect()->back()->with('error', 'You Can Not Delete This Role. This Role Is Already Assigned To The Users.');

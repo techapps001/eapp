@@ -29,16 +29,6 @@ class CustomerCreditNotes extends Model
         return $this->hasOne(Invoice::class, 'id', 'invoice');
     }
 
-    public function usedCreditNote()
-    {
-        return $this->hasMany(\Workdo\Account\Entities\CreditNote::class, 'credit_note', 'id')->sum('amount');
-    }
-
-    public static function creditNumberFormat($number)
-    {
-        return '#CN' . sprintf("%05d", $number);
-    }
-
     public static $statues = [
         'Pending',
         'Partially Used',

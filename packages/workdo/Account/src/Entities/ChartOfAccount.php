@@ -52,7 +52,7 @@ class ChartOfAccount extends Model
     }
     public function parentAccount()
     {
-        return $this->belongsTo(ChartOfAccountParent::class, 'parent' , 'account');
+        return $this->belongsTo(ChartOfAccountParent::class, 'parent');
     }
 
 

@@ -370,6 +370,7 @@ class StripeController extends Controller
             $invoice = \Workdo\Retainer\Entities\Retainer::find($request->invoice_id);
             $user_id = $invoice->created_by;
             $wokspace = $invoice->workspace;
+
             $invoice_payID = $invoice->retainer_id;
             $invoiceID = $invoice->id;
             $printID = \Workdo\Retainer\Entities\Retainer::retainerNumberFormat($invoice_payID, $user_id, $wokspace);
@@ -552,10 +553,10 @@ class StripeController extends Controller
 
                                     $due = $invoice->getDue();
                                     if ($due <= 0) {
-                                        $invoice->status = 4;
+                                        $invoice->status = 5;
                                         $invoice->save();
                                     } else {
-                                        $invoice->status = 3;
+                                        $invoice->status = 4;
                                         $invoice->save();
                                     }
 

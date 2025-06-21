@@ -40,7 +40,8 @@
             <div class="form-group">
                 {{ Form::label('payment_name', __('Payment Gateway'), ['class' => 'form-label']) }}<x-required></x-required>
                 <select name="payment_name" class="form-control" required="required">
-                    <option value="Bank Transfer" {{ $bankAccount->payment_name == 'Bank Transfer' ? 'selected' : ''}}>Bank Transfer</option>
+                    <option value=""disabled selected>{{ __('Select Type') }}</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
                         @stack('bank_payments')
                 </select>
             </div>

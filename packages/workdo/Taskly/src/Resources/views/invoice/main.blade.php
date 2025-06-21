@@ -4,17 +4,17 @@
 <h5 class="h4 d-inline-block font-weight-400 mb-4 pro_name">{{ __('Project') }}</h5>
 {{ Form::hidden('itemTaxRate', null, ['class' => 'form-control itemTaxRate']) }}
     <div class="card repeater" @if ($acction == 'edit') data-value='{!! json_encode($invoice->items) !!}' @endif>
-        <div class="item-section p-3 pb-0">
+        <div class="item-section py-4">
             <div class="row justify-content-between align-items-center">
-                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-4">
+                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-5">
                     <a href="#" data-repeater-create="" class="btn btn-primary tax_get mr-2" data-toggle="modal"
                         data-target="#add-bank">
-                        <i class="ti ti-plus"></i> {{ __('Add Item') }}
+                        <i class="ti ti-plus"></i> {{ __('Add item') }}
                     </a>
                 </div>
             </div>
         </div>
-        <div class="card-body table-border-style">
+        <div class="card-body table-border-style mt-2">
             <div class="table-responsive">
                 <table class="table  mb-0 table-custom-style" data-repeater-list="items" id="sortable-table">
                     <thead>
@@ -32,12 +32,7 @@
                         <tr>
                             <td width="25%" class="form-group pt-0">
                                 {{ Form::hidden('id', null, ['class' => 'form-control id']) }}
-                                <select name="product_id" class="form-control product_id item js-searchBox" required>
-                                    <option value="0">--</option>
-                                    @foreach ($tasks as $key => $task)
-                                        <option value="{{ $task->id }}">{{ $task->title }}</option>
-                                    @endforeach
-                                </select>
+                                {{ Form::select('product_id', $tasks, null, ['class' => 'form-control item js-searchBox', 'required' => 'required']) }}
                             </td>
                             <td>
                                 <div class="form-group price-input input-group search-form mb-0" style="width: 160px">
@@ -66,13 +61,13 @@
                             </td>
                             <td class="text-end amount">{{ __('0.00') }}</td>
                             <td>
-                                <div class="action-btn ms-2 float-end" data-repeater-delete>
+                                <div class="action-btn ms-2 float-end mb-3" data-repeater-delete>
                                     <a href="#!"
                                         class="mx-3 btn btn-sm d-inline-flex align-items-center m-2 p-2 bg-danger">
                                         <i class="ti ti-trash text-white" data-bs-toggle="tooltip"
                                             data-bs-original-title="{{ __('Delete') }}" ></i>
                                     </a>
-                                </div>
+                            </div>
                             </td>
                         </tr>
                         <tr>
@@ -89,30 +84,37 @@
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
+                            <td></td>
                             <td><strong>{{ __('Sub Total') }}
                                     ({{ isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '' }})</strong>
                             </td>
                             <td class="text-end subTotal">{{ __('0.00') }}</td>
+                            <td></td>
                         </tr>
                         <tr>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
+                            <td></td>
                             <td><strong>{{ __('Discount') }}
                                     ({{ isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '' }})</strong>
                             </td>
                             <td class="text-end totalDiscount">{{ __('0.00') }}</td>
+                            <td></td>
                         </tr>
                         <tr>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
+                            <td></td>
                             <td><strong>{{ __('Tax') }}
                                     ({{ isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '' }})</strong>
                             </td>
                             <td class="text-end totalTax">{{ __('0.00') }}</td>
+                            <td></td>
                         </tr>
                         <tr>
+                            <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
@@ -120,6 +122,7 @@
                                     ({{ isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '' }})</strong>
                             </td>
                             <td class="text-end totalAmount blue-text">{{ __('0.00') }}</td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -128,28 +131,6 @@
     </div>
 
 <script>
-    var allTasks = @json($tasks);
-
-    function refreshTaskSelectOptions() {
-        const selectedTaskIds = $('.product_id').map(function () {
-            return $(this).val();
-        }).get().filter(val => val && val !== "0");
-
-        $('.product_id').each(function () {
-            const $select = $(this);
-            const currentValue = $select.val();
-
-            $select.empty().append(`<option value="0">--</option>`);
-
-            allTasks.forEach(task => {
-                const isSelectedInOther = selectedTaskIds.includes(task.id.toString()) && currentValue !== task.id.toString();
-                if (!isSelectedInOther) {
-                    $select.append(`<option value="${task.id}" ${currentValue == task.id ? 'selected' : ''}>${task.title}</option>`);
-                }
-            });
-        });
-    }    
-
     var selector = "body";
     if ($(selector + " .repeater").length) {
         var $dragAndDrop = $("body .repeater tbody").sortable({
@@ -162,7 +143,6 @@
             },
             show: function() {
                 $(this).slideDown();
-                $(this).find('input.itemTaxRate').val($('.itemTaxRate').val()); 
                 var file_uploads = $(this).find('input.multi');
                 if (file_uploads.length) {
                     $(this).find('input.multi').MultiFile({
@@ -172,16 +152,19 @@
                     });
                 }
                 // for item SearchBox ( this function is  custom Js )
-                refreshTaskSelectOptions();
                 JsSearchBox();
             },
             hide: function(deleteElement) {
+
                 var $row = $(this); // The current row
                 var id = $row.find('.id').val(); // Get the item ID
 
                // Call the global delete function
                 deleteInvoiceItem($row, id, function() {      
-                    // Call the global delete function
+                    $(this).slideUp(deleteElement);
+                    $(this).remove();
+
+                     // Call the global delete function
                     var totalItemTaxPrice = 0;
                     var itemTaxPriceInput = $('.itemTaxPrice');
                     for (var j = 0; j < itemTaxPriceInput.length; j++) {
@@ -197,6 +180,12 @@
                     var subTotal = 0;
                     for (var i = 0; i < inputs.length; i++) {
                         subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                    }
+                    if ($('#invoice_type').val() == 'vehicleinspection' || $('#invoice_type').val() ==
+                        'machinerepair' || $('#invoice_type').val() == 'mobileservice') {
+                        service = isNaN(service) ? 0 : service;
+                        subTotal = parseFloat(subTotal) + service;
+                        $('.totalServiceCharge').html(service.toFixed(2));
                     }
                     var totalItemDiscountPrice = 0;
                     var itemDiscountPriceInput = $('.discount');
@@ -337,7 +326,7 @@
 
         if (tax_id != "") {
             $.ajax({
-                url: "{{ route('get.taxes') }}",
+                url: '{{ route('get.taxes') }}',
                 type: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': jQuery('#token').val()

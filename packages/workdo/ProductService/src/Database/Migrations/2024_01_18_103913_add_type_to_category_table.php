@@ -13,11 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('categories') &&  !Schema::hasColumn('categories', 'bank_branch')) {
-                Schema::table('categories', function (Blueprint $table) {
+        Schema::table('categories', function (Blueprint $table) {
+            if (!Schema::hasColumn('categories', 'bank_branch')) {
                 $table->integer('chart_account_id')->default(0)->after('color');
-            });
-        }
+            }
+        });
     }
 
 

@@ -31,19 +31,19 @@
         <div class="col-md-6">
             <div class="form-group">
                 {{ Form::label('from_account', __('From Account'),['class'=>'form-label']) }}<x-required></x-required>
-                {{ Form::select('from_account', $bankAccount,null, array('class' => 'form-control ','required'=>'required','placeholder' => 'Select Account','id' => 'from_account')) }}
+                {{ Form::select('from_account', $bankAccount,null, array('class' => 'form-control ','required'=>'required','placeholder' => 'Select Account')) }}
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 {{ Form::label('to_account', __('To Account'),['class'=>'form-label']) }}<x-required></x-required>
-                {{ Form::select('to_account', $bankAccount,null, array('class' => 'form-control','required'=>'required','placeholder' => 'Select Account')) }}
+                {{ Form::select('to_account', $bankAccount,null, array('class' => 'form-control ','required'=>'required','placeholder' => 'Select Account')) }}
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 {{ Form::label('amount', __('Amount'),['class'=>'form-label']) }}<x-required></x-required>
-                {{ Form::number('amount',null, array('class' => 'form-control bank_amount','required'=>'required',"min"=>"0",'placeholder' => __('Enter Amount'))) }}
+                {{ Form::number('amount',null, array('class' => 'form-control','required'=>'required',"min"=>"0",'placeholder' => __('Enter Amount'))) }}
             </div>
         </div>
         <div class="col-md-6">

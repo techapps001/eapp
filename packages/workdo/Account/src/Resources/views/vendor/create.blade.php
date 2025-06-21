@@ -101,7 +101,7 @@
         </div>
     </div>
 
-    @if(company_setting('bill_shipping_display') =='on' || company_setting('purchase_shipping_display')=='on')
+    @if(company_setting('bill_shipping_display')=='on')
         <div class="col-12 text-end mb-2">
             <div class="action-btn float-end">
                 <a class="mx-3 btn btn-sm align-items-center text-white bg-primary" id="billing_data"

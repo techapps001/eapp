@@ -28,9 +28,6 @@ use Workdo\CMMS\Entities\Location;
 use Workdo\CMMS\Entities\Workorder;
 use Workdo\ProductService\Entities\ProductService;
 use Illuminate\Support\Facades\Validator;
-use Workdo\Account\Entities\ChartOfAccount;
-use Workdo\Account\Entities\ChartOfAccountSubType;
-use Workdo\Account\Entities\ChartOfAccountType;
 
 class ProposalController extends Controller
 {
@@ -115,7 +112,6 @@ class ProposalController extends Controller
                 $product_services=[];
                 $projects=[];
                 $taxs=[];
-                $incomeChartAccounts = [];
                 if(module_is_active('Account'))
                 {
                     if ($customerId > 0) {
@@ -132,55 +128,6 @@ class ProposalController extends Controller
                     $category = \Workdo\ProductService\Entities\Category::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->where('type', 1)->get()->pluck
                     ('name', 'id');
                     $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
-
-                    $incomeTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                    ->where('workspace', getActiveWorkSpace())
-                    ->whereIn('name', ['Assets', 'Liabilities', 'Income'])
-                    ->get();
-
-                    foreach ($incomeTypes as $type) {
-                        $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                            ->where('created_by', '=', creatorId())
-                            ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                            ->get();
-
-                        $temp = [];
-
-                        foreach ($accountTypes as $accountType) {
-                            $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                                ->where('created_by', '=', creatorId())
-                                ->get();
-
-                            $incomeSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                            $tempData = [
-                                'account_name' => $accountType->name,
-                                'chart_of_accounts' => [],
-                                'subAccounts' => [],
-                            ];
-                            foreach ($chartOfAccounts as $chartOfAccount) {
-                                $tempData['chart_of_accounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                ];
-                            }
-
-                            foreach ($incomeSubAccounts as $chartOfAccount) {
-                                $tempData['subAccounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                    'parent'=>$chartOfAccount->parent
-                                ];
-                            }
-                            $temp[$accountType->id] = $tempData;
-                        }
-
-                        $incomeChartAccounts[$type->name] = $temp;
-                    }
                 }
                 if(module_is_active('Taskly'))
                 {
@@ -202,7 +149,7 @@ class ProposalController extends Controller
                 }else{
                     $customFields = null;
                 }
-                return view('proposal.create', compact('customers', 'proposal_number', 'product_services', 'category', 'customerId','projects','taxs','customFields','work_order','incomeChartAccounts'));
+                return view('proposal.create', compact('customers', 'proposal_number', 'product_services', 'category', 'customerId','projects','taxs','customFields','work_order'));
             }
             else
             {
@@ -312,17 +259,16 @@ class ProposalController extends Controller
                 }
 
                 $status = Proposal::$statues;
-                $proposal->proposal_id       = $this->proposalNumber();
-                $proposal->customer_id       = $request->customer_id;
-                $proposal->status            = 0;
-                $proposal->account_id        = $request->sale_chartaccount_id;
-                $proposal->account_type      = $request->account_type;
-                $proposal->proposal_module   = 'taskly';
-                $proposal->issue_date        = $request->issue_date;
-                $proposal->category_id       = $request->project;
-                $proposal->proposal_template = $request->proposal_template;
-                $proposal->workspace         = getActiveWorkSpace();
-                $proposal->created_by        = creatorId();
+                $proposal->proposal_id     = $this->proposalNumber();
+                $proposal->customer_id         = $request->customer_id;
+                $proposal->status          = 0;
+                $proposal->account_type   = $request->account_type;
+                $proposal->proposal_module = 'taskly';
+                $proposal->issue_date      = $request->issue_date;
+                $proposal->category_id     = $request->project;
+                $proposal->proposal_template    = $request->proposal_template;
+                $proposal->workspace       = getActiveWorkSpace();
+                $proposal->created_by      = creatorId();
 
                 $proposal->save();
 
@@ -440,14 +386,6 @@ class ProposalController extends Controller
                 {
                     $customer    = \Workdo\Account\Entities\Customer::where('user_id',$user->id)->where('workspace',getActiveWorkSpace())->first();
                 }
-                if (!empty($customer)) {
-                    $customer->model = 'Customer';
-                } else {
-                    $customer = $proposal->customer;
-                    if (!empty($customer)) {
-                        $customer->model = 'User';
-                    }
-                }
                 $iteams   = $proposal->items;
                 $status   = Proposal::$statues;
                 if(module_is_active('CustomField')){
@@ -496,56 +434,7 @@ class ProposalController extends Controller
                     $product_services=[];
                 }
 
-                $incomeChartAccounts = [];
 
-                $incomeTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                ->where('workspace', getActiveWorkSpace())
-                ->whereIn('name', ['Assets', 'Liabilities', 'Income'])
-                ->get();
-
-                foreach ($incomeTypes as $type) {
-                    $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                        ->where('created_by', '=', creatorId())
-                        ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                        ->get();
-
-                    $temp = [];
-
-                    foreach ($accountTypes as $accountType) {
-                        $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                        $incomeSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                        ->where('created_by', '=', creatorId())
-                        ->get();
-
-                        $tempData = [
-                            'account_name' => $accountType->name,
-                            'chart_of_accounts' => [],
-                            'subAccounts' => [],
-                        ];
-                        foreach ($chartOfAccounts as $chartOfAccount) {
-                            $tempData['chart_of_accounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                            ];
-                        }
-
-                        foreach ($incomeSubAccounts as $chartOfAccount) {
-                            $tempData['subAccounts'][] = [
-                                'id' => $chartOfAccount->id,
-                                'account_number' => $chartOfAccount->account_number,
-                                'account_name' => $chartOfAccount->name,
-                                'parent'=>$chartOfAccount->parent
-                            ];
-                        }
-                        $temp[$accountType->id] = $tempData;
-                    }
-
-                    $incomeChartAccounts[$type->name] = $temp;
-                }
                 $items = [];
                 $taxs = [];
                 $projects = [];
@@ -576,7 +465,7 @@ class ProposalController extends Controller
                 }else{
                     $customFields = null;
                 }
-                return view('proposal.edit', compact('customers','proposal', 'proposal_number', 'category', 'items','taxs','projects','customFields','work_order','incomeChartAccounts'));
+                return view('proposal.edit', compact('customers','proposal', 'proposal_number', 'category', 'items','taxs','projects','customFields','work_order'));
             }
             else
             {
@@ -687,14 +576,13 @@ class ProposalController extends Controller
                     }
 
                     $status = Proposal::$statues;
-                    $proposal->proposal_id       = $proposal->proposal_id;
-                    $proposal->customer_id       = $request->customer_id;
-                    $proposal->account_id        = $request->sale_chartaccount_id;
-                    $proposal->issue_date        = $request->issue_date;
-                    $proposal->account_type      = $request->account_type;
-                    $proposal->category_id       = $request->project;
-                    $proposal->proposal_module   = 'taskly';
-                    $proposal->proposal_template = $request->proposal_template;
+                    $proposal->proposal_id        = $proposal->proposal_id;
+                    $proposal->customer_id        = $request->customer_id;
+                    $proposal->issue_date         = $request->issue_date;
+                    $proposal->account_type   = $request->account_type;
+                    $proposal->category_id        = $request->project;
+                    $proposal->proposal_module    = 'taskly';
+                    $proposal->proposal_template    = $request->proposal_template;
                     $proposal->save();
 
                     $products = $request->items;
@@ -869,7 +757,7 @@ class ProposalController extends Controller
         $salePrice           = !empty($product) ?  $product->sale_price : 0;
         $quantity            = 1;
         $taxPrice            = !empty($product) ? (($taxRate / 100) * ($salePrice * $quantity)) : 0;
-        $data['totalAmount'] = !empty($product) ?  ($salePrice * $quantity + $taxPrice) : 0;
+        $data['totalAmount'] = !empty($product) ?  ($salePrice * $quantity) : 0;
 
         return json_encode($data);
     }
@@ -899,14 +787,13 @@ class ProposalController extends Controller
             $convertInvoice->invoice_id          = $this->invoiceNumber();
             $convertInvoice->user_id             = $proposal->customer_id;
             $convertInvoice->account_type        = $account_type;
-            $convertInvoice->account_id          = $proposal->account_id;
             $convertInvoice->issue_date          = date('Y-m-d');
             $convertInvoice->due_date            = date('Y-m-d');
             $convertInvoice->send_date           = null;
             $convertInvoice->category_id         = $proposal['category_id'];
             $convertInvoice->status              = 0;
             $convertInvoice->invoice_module      = $proposal['proposal_module'];
-            $convertInvoice->invoice_template    = $proposal['proposal_template'];
+            $convertInvoice->invoice_template      = $proposal['proposal_template'];
             $convertInvoice->workspace           = $proposal['workspace'];
             $convertInvoice->created_by          = $proposal['created_by'];
             $convertInvoice->save();
@@ -1116,13 +1003,9 @@ class ProposalController extends Controller
                 {
                     $customer = \Workdo\Account\Entities\Customer::where('user_id',$proposal->customer_id)->first();
                 }
-                if (!empty($customer)) {
-                    $customer->model = 'Customer';
-                } else {
+                else
+                {
                     $customer = $proposal->customer;
-                    if (!empty($customer)) {
-                        $customer->model = 'User';
-                    }
                 }
                 if(module_is_active('CustomField')){
                     $proposal->customField = \Workdo\CustomField\Entities\CustomField::getData($proposal, 'Base','Proposal');
@@ -1261,13 +1144,9 @@ class ProposalController extends Controller
             {
                 $customer         = \Workdo\Account\Entities\Customer::where('user_id', $proposal->customer_id)->first();
             }
-            if (!empty($customer)) {
-                $customer->model = 'Customer';
-            } else {
-                $customer = $proposal->customer;
-                if (!empty($customer)) {
-                    $customer->model = 'User';
-                }
+            else
+            {
+                $customer         = User::where('id', $proposal->customer_id)->first();
             }
 
             $items         = [];

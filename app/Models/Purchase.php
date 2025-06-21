@@ -5,7 +5,6 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Workdo\Account\Entities\Vender;
 
 class Purchase extends Model
 {
@@ -36,12 +35,13 @@ class Purchase extends Model
     public function vender()
     {
         // if (module_is_active('Account')) {
-            return $this->hasOne(Vender::class, 'id', 'vender_id');
+
+            return $this->hasOne(\Workdo\Account\Entities\Vender::class, 'user_id', 'vender_id');
         // }
     }
     public function user()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->hasOne(User::class, 'id', 'vender_id');
     }
     public function tax()
     {

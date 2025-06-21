@@ -78,7 +78,7 @@ class ProductServiceDataTable extends DataTable
                 }
                 return $quantity;
             });
-        if (\Laratrust::hasPermission('product&service delete') || \Laratrust::hasPermission('product&service edit') || \Laratrust::hasPermission('product&service show')) {
+        if (\Laratrust::hasPermission('product&service delete') || \Laratrust::hasPermission('product&service edit')) {
             $dataTable->addColumn('action', function (ProductService $productService) {
                 return view('product-service::action', compact('productService'));
             });

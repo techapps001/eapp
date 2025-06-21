@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 use Workdo\Account\Entities\StockReport;
 use Workdo\LMS\Entities\Student;
 use Workdo\Fleet\Entities\VehicleInvoice;
-use Workdo\Newspaper\Entities\NewspaperTax;
 
 class Invoice extends Model
 {
@@ -132,18 +131,19 @@ class Invoice extends Model
     {
         $subTotal = 0;
         foreach ($this->items as $product) {
-            if($product->quantity == 0){
-                $quantity = 1;
-            }
-            else{
-                $quantity = $product->quantity;
-            }
-            $subTotal += ($product->price * $quantity);
+            $subTotal += ($product->price * $product->quantity);
         }
         return $subTotal;
     }
 
-
+    public function getChildTotal()
+    {
+        $subTotal = 0;
+        foreach ($this->items as $product) {
+            $subTotal += $product->price;
+        }
+        return $subTotal;
+    }
     public function getFleetSubTotal()
     {
         $subTotal = 0;
@@ -273,34 +273,18 @@ class Invoice extends Model
 
         return $totalTax;
     }
-
-    public function getNewsPaperTax()
-    {
-        $totalTax = 0;
-        foreach ($this->items as $product)
-        {
-            $tax = NewspaperTax::where('id',$product->tax)->first();
-            $totalTax +=  ($tax->percentage / 100) * ($product->price * $product->quantity);
-        }
-        return $totalTax;
-    }
-
     public function getTotal()
     {
         if ($this->invoice_module == 'Fleet') {
             return ($this->getFleetSubTotal() - $this->getTotalDiscount() + $this->getTotalTax());
         }
-        else if($this->invoice_module == 'machinerepair' || $this->invoice_module == 'mobileservice' || $this->invoice_module == 'vehicleinspection') {
-            return ($this->getSubTotal() - $this->getTotalDiscount() + $this->getTotalTax()) + $this->category_id;
-        }
-        else if($this->invoice_module == 'newspaper') {
-            return ($this->getSubTotal() + $this->getNewsPaperTax());
-        }
-        else{
-            return ($this->getSubTotal() - $this->getTotalDiscount() + $this->getTotalTax());
-        }
+        return ($this->getSubTotal() - $this->getTotalDiscount() + $this->getTotalTax());
     }
+    public function getNewTotal()
+    {
 
+        return ($this->getChildTotal() - $this->getTotalDiscount() + $this->getTotalTax());
+    }
     public function getDue()
     {
         $due = 0;
@@ -310,6 +294,16 @@ class Invoice extends Model
         }
 
         return ($this->getTotal() - $due) - $this->invoiceTotalCreditNote();
+    }
+    public function getChildDue()
+    {
+        $due = 0;
+
+        foreach ($this->payments as $payment) {
+            $due += $payment->amount;
+        }
+
+        return ($this->getNewTotal() - $due) - $this->invoiceTotalCreditNote();
     }
 
     public static function starting_number($id, $type)
@@ -339,10 +333,11 @@ class Invoice extends Model
     }
     public static function total_quantity($type, $quantity, $product_id, $user_id = null)
     {
+
         if (module_is_active('ProductService', $user_id)) {
             $product      = \Workdo\ProductService\Entities\ProductService::find($product_id);
             if (!empty($product)) {
-                if (($product->type == 'product' || $product->type == 'consignment' || $product->type == 'parts' || $product->type == 'rent'  || $product->type == 'music institute' || $product->type == 'cmms')) {
+                if (($product->type == 'product' || $product->type == 'consignment' || $product->type == 'parts' || $product->type == 'rent'  || $product->type == 'music institute')) {
                     $pro_quantity = $product->quantity;
                     if ($type == 'minus') {
                         $product->quantity = $pro_quantity - $quantity;

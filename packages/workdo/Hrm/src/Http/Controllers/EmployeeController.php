@@ -133,7 +133,6 @@ class EmployeeController extends Controller
                         'type' => $roles->name,
                         'lang' => 'en',
                         'workspace_id' => getActiveWorkSpace(),
-                        'active_workspace' => getActiveWorkSpace(),
                         'created_by' => creatorId(),
                     ]);
                 $user->addRole($roles);
@@ -374,7 +373,7 @@ class EmployeeController extends Controller
             }
 
             $validator = \Validator::make($request->all(),$rules);
-
+            
             if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
 
@@ -392,10 +391,7 @@ class EmployeeController extends Controller
 
             if (!empty($request->document) && !is_null($request->document)) {
                 $document_implode = implode(',', array_keys($request->document));
-            } elseif (empty($request->document) && !empty($employee->documents) && !is_null($employee->documents)) {
-                $document_implode = $employee->documents;
-            }
-            else {
+            } else {
                 $document_implode = null;
             }
 

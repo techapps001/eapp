@@ -6,11 +6,11 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Workdo\Account\Entities\AccountUtility;
 use Workdo\Account\Entities\Bill;
 use Workdo\Account\Entities\DebitNote;
 use Workdo\Account\Entities\Vender;
 use App\Traits\CreditDebitNoteBalance;
-use Workdo\Account\Entities\CustomerDebitNotes;
 
 class DebitNoteController extends Controller
 {
@@ -32,16 +32,10 @@ class DebitNoteController extends Controller
     public function create($bill_id)
     {
         if (Auth::user()->isAbleTo('debitnote create')) {
-
             $billDue = Bill::where('id', $bill_id)->first();
             $vendor  = Vender::where('user_id', $billDue->user_id)->first();
-            $debitNotes = CustomerDebitNotes::with('custom_vendor')->select('customer_debit_notes.*')
-            ->leftJoin('bills', 'customer_debit_notes.bill', '=', 'bills.id')
-            ->where('bills.user_id' , $billDue->user_id)
-            ->where('customer_debit_notes.type' ,'bill')
-            ->where('bills.workspace', getActiveWorkSpace())->where('customer_debit_notes.status','!=','2')->get()->pluck('debit_id' , 'id');
 
-            return view('account::debitNote.create', compact('billDue','vendor','bill_id' , 'debitNotes'));
+            return view('account::debitNote.create', compact('billDue','vendor','bill_id'));
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -68,6 +62,12 @@ class DebitNoteController extends Controller
                 return redirect()->back()->with('error', $messages->first());
             }
             $billDue = Bill::where('id', $bill_id)->first();
+            $vendor  = Vender::where('user_id', $billDue->user_id)->first();
+
+            if($request->amount > $vendor->debit_note_balance)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($vendor->debit_note_balance) . ' debit limit of this bill.');
+            }
 
             if($request->amount > $billDue->getDue())
             {
@@ -85,14 +85,14 @@ class DebitNoteController extends Controller
 
             $debit              = new DebitNote();
             $debit->bill        = $bill_id;
-            $debit->debit_note  = $request->debit_note;
-            $debit->vendor      = 0;
+            $debit->vendor      = $vendor->id;
             $debit->date        = $request->date;
             $debit->amount      = $request->amount;
             $debit->description = isset($request->description) ? $request->description : '--';
             $debit->save();
 
-            $this->updateDebitNoteStatus($debit);
+            // store debitnote balance vendor's table
+            $this->updateBalance('vendor', $vendor->id, $request->amount, 'debit');
 
             return redirect()->back()->with('success', __('The debit note has been created successfully.'));
         } else {
@@ -153,6 +153,13 @@ class DebitNoteController extends Controller
 
             $debit   = DebitNote::find($debitNote_id);
 
+            $vendor  = Vender::where('user_id', $billDue->user_id)->first();
+
+            if($request->amount > $vendor->debit_note_balance + $debit->amount)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($vendor->debit_note_balance + $debit->amount) . ' debit limit of this bill.');
+            }
+
             if($request->amount > $billDue->getDue() + $debit->amount)
             {
                 return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($billDue->getDue() + $debit->amount) . ' debit limit of this bill.');
@@ -167,12 +174,17 @@ class DebitNoteController extends Controller
                 $billDue->save();
             }
 
+            // store creditnote customer's table
+            $this->updateBalance('vendor', $vendor->id, $debit->amount, 'credit');
+
             $debit->date        = $request->date;
             $debit->amount      = $request->amount;
             $debit->description = $request->description;
             $debit->save();
 
-            $this->updateDebitNoteStatus($debit);
+            $this->updateBalance('vendor', $vendor->id, $request->amount, 'debit');
+
+
 
             return redirect()->back()->with('success', __('The debit note details are updated successfully.'));
         } else {
@@ -203,7 +215,9 @@ class DebitNoteController extends Controller
                 }
                 $bill->save();
 
-                $this->updateDebitNoteStatus($debitNote , 'delete');
+                // store debitnote balance vendor's table
+                $this->updateBalance('vendor', $debitNote->vendor, $debitNote->amount, 'credit');
+
                 $debitNote->delete();
 
                 return redirect()->back()->with('success', __('The debit note has been deleted.'));
@@ -213,13 +227,5 @@ class DebitNoteController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-    }
-
-    public function getPrice(Request $request)
-    {
-        $debitNote = CustomerDebitNotes::find($request->debit_note);
-        $price      = !empty($debitNote) ? ($debitNote->amount + $request->amount) - $debitNote->usedDebitNote($debitNote) : 0;
-
-        return response()->json($price);
     }
 }

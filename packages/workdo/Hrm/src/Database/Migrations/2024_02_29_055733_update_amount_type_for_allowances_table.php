@@ -13,31 +13,31 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('allowances') && Schema::hasColumn('allowances', 'amount')) {
+        if (Schema::hasTable('allowances')) {
             Schema::table('allowances', function (Blueprint $table) {
                 $table->float('amount', 30, 2)->nullable()->change();
             });
         }
 
-        if (Schema::hasTable('commissions') && Schema::hasColumn('commissions', 'amount')) {
+        if (Schema::hasTable('commissions')) {
             Schema::table('commissions', function (Blueprint $table) {
                 $table->float('amount', 30, 2)->nullable()->change();
             });
         }
 
-        if (Schema::hasTable('loans') && Schema::hasColumn('loans', 'amount')) {
+        if (Schema::hasTable('loans')) {
             Schema::table('loans', function (Blueprint $table) {
                 $table->float('amount', 30, 2)->nullable()->change();
             });
         }
 
-        if (Schema::hasTable('saturation_deductions') && Schema::hasColumn('saturation_deductions', 'amount')) {
+        if (Schema::hasTable('saturation_deductions')) {
             Schema::table('saturation_deductions', function (Blueprint $table) {
                 $table->float('amount', 30, 2)->nullable()->change();
             });
         }
 
-        if (Schema::hasTable('other_payments') && Schema::hasColumn('other_payments', 'amount')) {
+        if (Schema::hasTable('other_payments')) {
             Schema::table('other_payments', function (Blueprint $table) {
                 $table->float('amount', 30, 2)->nullable()->change();
             });

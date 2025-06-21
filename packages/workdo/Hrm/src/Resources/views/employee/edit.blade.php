@@ -156,29 +156,16 @@
 
                                                                     @if ($document->is_required == 1 && empty($employeedoc[$document->id])) data-key="{{ $key }}" required @endif
 
-                                                                    onchange="previewFile(this, '{{ $key }}')">
+                                                                    onchange="document.getElementById('{{ 'blah' . $key }}').src = window.URL.createObjectURL(this.files[0])">
                                                                 <hr>
                                                             </label>
                                                         </div>
                                                         </div>
                                                         <div class="float-right col-3">
-                                                            @php
-                                                                $docPath = isset($employeedoc[$document->id]) ? $employeedoc[$document->id] : null;
-                                                                $ext = $docPath ? strtolower(pathinfo($docPath, PATHINFO_EXTENSION)) : null;
-                                                            @endphp
-                                                            @if ($docPath && strtolower($ext) === 'pdf')
-                                                                <img id="preview_{{ $key }}" style="margin-left: 15px;"
-                                                                    src="{{ asset('images/folder.png') }}"
-                                                                    width="120" height="100" class="rounded" />
-                                                            @elseif ($docPath)
-                                                                <img id="preview_{{ $key }}" style="margin-left: 15px;"
-                                                                    src="{{ get_file($docPath) }}"
-                                                                    width="120" height="100" class="rounded" />
-                                                            @else
-                                                                <img id="preview_{{ $key }}" style="margin-left: 15px;"
-                                                                    src="{{ asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}"
-                                                                    width="120" height="100" class="rounded" />
-                                                            @endif
+
+                                                            <img id="{{ 'blah' . $key }}" style="margin-left: 15px;"
+                                                            src="{{ isset($employeedoc[$document->id]) && !empty($employeedoc[$document->id]) ? get_file($employeedoc[$document->id]) : asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}"
+                                                            width="120" height="100" class="rounded" />
                                                         </div>
 
                                                     </div>
@@ -604,23 +591,5 @@
                     $('#company-tab').removeClass('show active');
                     $('#personal-details-tab').addClass('show active');
             });
-        </script>
-        <script>
-            function previewFile(input, key) {
-                const file = input.files[0];
-                const preview = document.getElementById('preview_' + key);
-
-                if (!file) return;
-
-                const fileType = file.type;
-
-                if (fileType === 'application/pdf') {
-                    preview.src = "{{ asset('images/folder.png') }}";
-                } else if (fileType.startsWith('image/')) {
-                    preview.src = URL.createObjectURL(file);
-                } else {
-                    preview.src = "{{ asset('packages/workdo/Hrm/src/Resources/assets/image/default.png') }}";
-                }
-            }
         </script>
 @endpush

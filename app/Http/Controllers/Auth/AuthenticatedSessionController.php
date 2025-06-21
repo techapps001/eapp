@@ -166,7 +166,7 @@ class AuthenticatedSessionController extends Controller
 
         }
         // Settings Cache forget
-        sideMenuCacheForget();
+        // sideMenuCacheForget();
 
         if($redirect)
         {

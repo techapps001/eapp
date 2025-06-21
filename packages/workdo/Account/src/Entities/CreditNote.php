@@ -11,15 +11,10 @@ class CreditNote extends Model
 
     protected $fillable = [
         'invoice',
-        'credit_note',
         'customer',
         'amount',
         'date',
     ];
 
-    public function creditNote()
-    {
-        return $this->hasOne(CustomerCreditNotes::class, 'id', 'credit_note');
-    }
 
 }

@@ -13,11 +13,12 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('bank_accounts') && !Schema::hasColumn('bank_accounts', 'bank_type')) {
-            Schema::table('bank_accounts', function (Blueprint $table) {
+
+        Schema::table('bank_accounts', function (Blueprint $table) {
+            if (!Schema::hasColumn('bank_accounts', 'bank_type')) {
                 $table->string('bank_type')->after('bank_name');
-            });
-        }
+            }
+        });
     }
 
     /**

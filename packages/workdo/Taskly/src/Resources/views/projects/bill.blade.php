@@ -70,10 +70,17 @@
                                             @endif
                                         </td>
 
-                                        <td>{{ currency_format_with_sym($invoice->getTotal()) }}</td>
+                                        @if ($invoice->invoice_module == 'childcare')
+                                            <td>{{ currency_format_with_sym($invoice->getChildTotal()) }}</td>
+                                        @else
+                                            <td>{{ currency_format_with_sym($invoice->getTotal()) }}</td>
+                                        @endif
 
-
-                                        <td>{{ currency_format_with_sym($invoice->getDue()) }}</td>
+                                        @if ($invoice->invoice_module == 'childcare')
+                                            <td>{{ currency_format_with_sym($invoice->getChildDue()) }}</td>
+                                        @else
+                                            <td>{{ currency_format_with_sym($invoice->getDue()) }}</td>
+                                        @endif
 
 
                                         <td>

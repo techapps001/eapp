@@ -17,8 +17,8 @@ class ProductDestroyBill
      */
     public function __construct($bill, $request)
     {
-        $this->bill = $bill;
-        $this->request = $request;
+        $bill = $this->bill;
+        $request = $this->request;
     }
 
     /**

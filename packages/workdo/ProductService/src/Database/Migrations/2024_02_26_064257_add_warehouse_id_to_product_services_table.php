@@ -13,11 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('product_services') && !Schema::hasColumn('product_services', 'warehouse_id')) {
-            Schema::table('product_services', function (Blueprint $table) {
+        Schema::table('product_services', function (Blueprint $table) {
+            if (!Schema::hasColumn('product_services', 'warehouse_id')) {
                 $table->integer('warehouse_id')->after('type')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**

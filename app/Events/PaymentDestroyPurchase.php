@@ -14,12 +14,9 @@ class PaymentDestroyPurchase
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $purchase;
     public $payment;
-
-    public function __construct($purchase , $payment)
+    public function __construct($payment)
     {
-        $this->purchase = $purchase;
-        $this->payment  = $payment;
+        $this->payment = $payment;
     }
 }

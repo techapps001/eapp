@@ -23,15 +23,12 @@ class ProposalDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rowColumn = ['proposal_id', 'issue_date', 'status','action','total_amount'];
+        $rowColumn = ['proposal_id', 'issue_date', 'status','action'];
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('proposal_id', function (Proposal $proposal) {
                 $url = route('proposal.show', \Crypt::encrypt($proposal->id));
                 return '<a href="' . $url . '" class="btn btn-outline-primary">' . \App\Models\Proposal::proposalNumberFormat($proposal->proposal_id) . '</a>';
-            })
-            ->addColumn('total_amount', function (Proposal $proposal) {
-                return currency_format_with_sym($proposal->getTotal());
             })
             ->editColumn('issue_date', function (Proposal $proposal) {
                 return company_date_formate($proposal->issue_date);
@@ -244,7 +241,6 @@ class ProposalDataTable extends DataTable
             $column[] = Column::make('customer_id')->title(__('Customer'));
         }
         $column[] = Column::make('account_type')->title(__('Account Type'));
-        $column[] = Column::computed('total_amount')->title(__('Total Amount'));
         $column[] = Column::make('issue_date')->title(__('Issue Date'));
         $column[] = Column::make('status')->title(__('Status'));
         $column[] = Column::computed('action')

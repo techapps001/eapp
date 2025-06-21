@@ -51,7 +51,7 @@
                 <option value="jewellery store" @if ($productService->type == 'jewellery store') selected @endif>
                     {{ __('jewellery store') }}</option>
             @endif
-
+            
         </select>
     </div>
 @endsection
@@ -65,7 +65,7 @@
             </div>
         </div>
     </div>
-    {{ Form::model($productService, ['route' => ['product-service.update', $productService->id], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'class' => 'needs-validation', 'novalidate']) }}
+    {{ Form::model($productService, ['route' => ['product-service.update', $productService->id], 'method' => 'PUT', 'enctype' => 'multipart/form-data']) }}
     {{ Form::hidden('type', $productService->type, ['id' => 'type']) }}
     <div class="section_div">
     </div>

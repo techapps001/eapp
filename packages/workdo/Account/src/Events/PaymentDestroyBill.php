@@ -14,11 +14,8 @@ class PaymentDestroyBill
      * @return void
      */
     public $bill;
-    public $payment;
-
-    public function __construct($bill , $payment)
+    public function __construct($bill)
     {
-        $this->bill    = $bill;
-        $this->payment = $payment;
+        $this->bill = $bill;
     }
 }

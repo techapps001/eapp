@@ -26,16 +26,11 @@ use App\Events\SentPurchase;
 use App\Events\UpdatePurchase;
 use Illuminate\Support\Facades\File;
 use App\Models\PurchaseAttachment;
-use App\Models\PurchaseDebitNote;
-use Illuminate\Support\Facades\DB;
 use Workdo\ProductService\Entities\ProductService;
 use Illuminate\Support\Facades\Validator;
 use Workdo\Account\Entities\AccountUtility;
-use Workdo\Account\Entities\BankAccount;
-use Workdo\Account\Entities\CustomerDebitNotes;
 use Workdo\Account\Entities\Transaction;
 use Workdo\Account\Entities\Transfer;
-use Workdo\Account\Events\DestroyPurchaseProduct;
 
 class PurchaseController extends Controller
 {
@@ -52,7 +47,6 @@ class PurchaseController extends Controller
                 $vender->prepend('Select Vendor', '');
             }
             $status = Purchase::$statues;
-
             return $dataTable->render('purchases.index', compact('status', 'vender'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -65,6 +59,7 @@ class PurchaseController extends Controller
      */
     public function create($vendorId)
     {
+
         if (\Auth::user()->isAbleTo('purchase create')) {
             if (module_is_active('ProductService')) {
                 $category = [];
@@ -151,25 +146,23 @@ class PurchaseController extends Controller
 
                     return redirect()->back()->with('error', $messages->first());
                 }
-                $vender = \Workdo\Account\Entities\Vender::where('user_id', $request->vender_id)->first();
-                if (empty($vender)) {
-                    $user = User::find($request->vender_id);
+                if (!empty($request->vender_id)) {
+                    $vender = \Workdo\Account\Entities\Vender::where('user_id', $request->vender_id)->first();
                 }
-
                 $purchase = new Purchase();
-                $purchase->purchase_id      = $this->purchaseNumber();
-                $purchase->vender_id        = !empty($vender) ?  $vender->id : null;
-                $purchase->user_id          = $vender->user_id ?? $user->id;
-                $purchase->vender_name      = !empty($request->vender_name) ? $request->vender_name : '';
-                $purchase->account_type     = $request->account_type;
-                $purchase->warehouse_id     = $request->warehouse_id;
-                $purchase->purchase_date    = $request->purchase_date;
-                $purchase->purchase_number  = !empty($request->purchase_number) ? $request->purchase_number : 0;
-                $purchase->status           = 0;
-                $purchase->category_id      = $request->category_id;
-                $purchase->purchase_module  = 'account';
-                $purchase->workspace        = getActiveWorkSpace();
-                $purchase->created_by       = creatorId();
+                $purchase->purchase_id = $this->purchaseNumber();
+                $purchase->vender_id = $request->vender_id;
+                $purchase->user_id = !empty($vender) ? $vender->user_id : null;
+                $purchase->vender_name = !empty($request->vender_name) ? $request->vender_name : '';
+                $purchase->account_type = $request->account_type;
+                $purchase->warehouse_id = $request->warehouse_id;
+                $purchase->purchase_date = $request->purchase_date;
+                $purchase->purchase_number = !empty($request->purchase_number) ? $request->purchase_number : 0;
+                $purchase->status = 0;
+                $purchase->category_id = $request->category_id;
+                $purchase->purchase_module = 'account';
+                $purchase->workspace = getActiveWorkSpace();
+                $purchase->created_by = creatorId();
                 $purchase->save();
 
                 if (module_is_active('CustomField')) {
@@ -242,23 +235,20 @@ class PurchaseController extends Controller
                 if (!empty($request->vender_id)) {
                     $vender = \Workdo\Account\Entities\Vender::where('user_id', $request->vender_id)->first();
                 }
-                if (empty($vender)) {
-                    $user = User::find($request->vender_id);
-                }
                 $purchase = new Purchase();
-                $purchase->purchase_id      = $this->purchaseNumber();
-                $purchase->vender_id        = !empty($vender) ?  $vender->id : null;
-                $purchase->user_id          = $vender->user_id ?? $user->id;
-                $purchase->vender_name      = !empty($request->vender_name) ? $request->vender_name : '';
-                $purchase->account_type     = $request->account_type;
-                $purchase->warehouse_id     = $request->warehouse_id;
-                $purchase->purchase_date    = $request->purchase_date;
-                $purchase->purchase_number  = !empty($request->purchase_number) ? $request->purchase_number : 0;
-                $purchase->status           = 0;
-                $purchase->category_id      = $request->category_id;
-                $purchase->purchase_module  = 'taskly';
-                $purchase->workspace        = getActiveWorkSpace();
-                $purchase->created_by       = creatorId();
+                $purchase->purchase_id = $this->purchaseNumber();
+                $purchase->vender_id = $request->vender_id;
+                $purchase->user_id = !empty($vender) ? $vender->user_id : null;
+                $purchase->vender_name = !empty($request->vender_name) ? $request->vender_name : '';
+                $purchase->account_type = $request->account_type;
+                $purchase->warehouse_id = $request->warehouse_id;
+                $purchase->purchase_date = $request->purchase_date;
+                $purchase->purchase_number = !empty($request->purchase_number) ? $request->purchase_number : 0;
+                $purchase->status = 0;
+                $purchase->category_id = $request->category_id;
+                $purchase->purchase_module = 'taskly';
+                $purchase->workspace = getActiveWorkSpace();
+                $purchase->created_by = creatorId();
                 $purchase->save();
 
                 if (module_is_active('CustomField')) {
@@ -329,23 +319,20 @@ class PurchaseController extends Controller
                 if (!empty($request->vender_id)) {
                     $vender = \Workdo\Account\Entities\Vender::where('user_id', $request->vender_id)->first();
                 }
-                if (empty($vender)) {
-                    $user = User::find($request->vender_id);
-                }
                 $purchase = new Purchase();
-                $purchase->purchase_id      = $this->purchaseNumber();
-                $purchase->vender_id        = !empty($vender) ?  $vender->id : null;
-                $purchase->user_id          = $vender->user_id ?? $user->id;
-                $purchase->vender_name      = !empty($request->vender_name) ? $request->vender_name : '';
-                $purchase->account_type     = $request->account_type;
-                $purchase->warehouse_id     = $request->warehouse_id;
-                $purchase->purchase_date    = $request->purchase_date;
-                $purchase->purchase_number  = !empty($request->purchase_number) ? $request->purchase_number : 0;
-                $purchase->status           = 0;
-                $purchase->category_id      = $request->category_id;
-                $purchase->purchase_module  = 'cmms';
-                $purchase->workspace        = getActiveWorkSpace();
-                $purchase->created_by       = creatorId();
+                $purchase->purchase_id = $this->purchaseNumber();
+                $purchase->vender_id = $request->vender_id;
+                $purchase->user_id = !empty($vender) ? $vender->user_id : null;
+                $purchase->vender_name = !empty($request->vender_name) ? $request->vender_name : '';
+                $purchase->account_type = $request->account_type;
+                $purchase->warehouse_id = $request->warehouse_id;
+                $purchase->purchase_date = $request->purchase_date;
+                $purchase->purchase_number = !empty($request->purchase_number) ? $request->purchase_number : 0;
+                $purchase->status = 0;
+                $purchase->category_id = $request->category_id;
+                $purchase->purchase_module = 'cmms';
+                $purchase->workspace = getActiveWorkSpace();
+                $purchase->created_by = creatorId();
                 $purchase->save();
 
                 if (module_is_active('CustomField')) {
@@ -397,8 +384,7 @@ class PurchaseController extends Controller
      */
     public function show($ids)
     {
-        if (\Auth::user()->isAbleTo('purchase show'))
-        {
+        if (\Auth::user()->isAbleTo('purchase show')) {
             try {
                 $id = Crypt::decrypt($ids);
             } catch (\Throwable $th) {
@@ -412,15 +398,7 @@ class PurchaseController extends Controller
                 $purchasePayment = PurchasePayment::where('purchase_id', $purchase->id)->first();
                 $vendor = [];
                 if (module_is_active('Account')) {
-                    $vendor = \Workdo\Account\Entities\Vender::where('user_id', $purchase->user_id)->where('workspace', getActiveWorkSpace())->first();
-                }
-                if (!empty($vendor)) {
-                    $vendor->model = 'Customer';
-                } else {
-                    $vendor = $purchase->user;
-                    if (!empty($vendor)) {
-                        $vendor->model = 'User';
-                    }
+                    $vendor = $purchase->vender;
                 }
                 $iteams = $purchase->itemswithproduct;
                 if (module_is_active('CustomField')) {
@@ -448,6 +426,8 @@ class PurchaseController extends Controller
      */
     public function edit($idsd)
     {
+
+
         if (module_is_active('ProductService')) {
             if (\Auth::user()->isAbleTo('purchase edit')) {
                 try {
@@ -465,6 +445,7 @@ class PurchaseController extends Controller
                 if (module_is_active('Account')) {
                     $venders = User::where('type', 'vendor')->where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
                 }
+
                 $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
 
                 if (module_is_active('CustomField')) {
@@ -524,25 +505,18 @@ class PurchaseController extends Controller
                         $purchase->vendor_signature = NULL;
                     }
                 }
-
-                $vender = \Workdo\Account\Entities\Vender::where('user_id', $request->vender_id)->first();
-
-                if (!empty($vender)) {
-                    $purchase->vender_id = !empty($vender) ?  $vender->id : null;
+                if (!empty($request->vender_id)) {
+                    $purchase->vender_id = $request->vender_id;
                     $purchase->vender_name = NULL;
                 } else {
                     $purchase->vender_name = $request->vender_name;
                     $purchase->vender_id = 0;
                 }
 
-                if (empty($vender)) {
-                    $user = User::find($request->vender_id);
-                }
-                $purchase->user_id        = $vender->user_id ?? $user->id;
-                $purchase->purchase_date  = $request->purchase_date;
-                $purchase->category_id    = $request->category_id;
-                $purchase->save();
 
+                $purchase->purchase_date = $request->purchase_date;
+                $purchase->category_id = $request->category_id;
+                $purchase->save();
                 $products = $request->items;
 
                 if (module_is_active('CustomField')) {
@@ -624,66 +598,53 @@ class PurchaseController extends Controller
     public function destroy(Purchase $purchase)
     {
         if (\Auth::user()->isAbleTo('purchase delete')) {
+            if ($purchase->created_by == creatorId() && $purchase->workspace == getActiveWorkSpace()) {
+                $purchase_products = PurchaseProduct::where('purchase_id', $purchase->id)->get();
+                $purchase_payments = PurchasePayment::where('purchase_id', '=', $purchase->id)->get();
+                foreach ($purchase_payments as $purchase_payment) {
 
-            $purchaseDebitNote = CustomerDebitNotes::where('bill',$purchase->id)->where('type' , 'purchase')->first();
-
-            if(!$purchaseDebitNote) {
-                if ($purchase->created_by == creatorId() && $purchase->workspace == getActiveWorkSpace()) {
-                    $purchase_products = PurchaseProduct::where('purchase_id', $purchase->id)->get();
-                    $purchase_payments = PurchasePayment::where('purchase_id', '=', $purchase->id)->get();
-                    $getDue = $purchase->getTotal() - $purchase->getDue();
-                    AccountUtility::updateUserBalance('vendor', $purchase->vendor_id, $getDue, 'debit');
-                    foreach ($purchase_payments as $purchase_payment) {
-                        $account = BankAccount::where(['created_by' => $purchase->created_by, 'workspace' => $purchase->workspace])->select('id')->first();
-                        $account_id = $purchase_payment->account_id == 0 ? $account->id : $purchase_payment->account_id;
-                        Transfer::bankAccountBalance($account_id, $purchase_payment->amount, 'credit');
-
-                        delete_file($purchase_payment->add_receipt);
-                        $purchase_payment->delete();
-                    }
-
-                    foreach ($purchase_products as $purchase_product) {
-                        $warehouse_qty = WarehouseProduct::where('warehouse_id', $purchase->warehouse_id)->where('product_id', $purchase_product->product_id)->first();
-                        if (!empty($warehouse_qty)) {
-                            $warehouse_qty->quantity = $warehouse_qty->quantity - $purchase_product->quantity;
-
-                            if ($warehouse_qty->quantity > 0) {
-                                $warehouse_qty->save();
-                            } else {
-                                $warehouse_qty->delete();
-                            }
-                        }
-                        $product_qty = \Workdo\ProductService\Entities\ProductService::where('id', $purchase_product->product_id)->first();
-                        if (!empty($product_qty)) {
-                            $product_qty->quantity = $product_qty->quantity - $purchase_product->quantity;
-                            $product_qty->save();
-                        }
-
-                        $purchase_product->delete();
-                    }
-                    if (module_is_active('CustomField')) {
-                        $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'pos')->where('sub_module', 'warehouse')->get();
-                        foreach ($customFields as $customField) {
-                            $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $purchase->id)->where('field_id', $customField->id)->first();
-                            if (!empty($value)) {
-
-                                $value->delete();
-                            }
-                        }
-                    }
-                    PurchaseAttachment::where('purchase_id', $purchase->id)->delete();
-
-                    PurchaseProduct::where('purchase_id', '=', $purchase->id)->delete();
-
-                    event(new DestroyPurchase($purchase));
-                    $purchase->delete();
-
-                    return redirect()->back()->with('success', __('The purchase has been deleted'));
-                } else {
-                    return redirect()->back()->with('error', __('Permission denied.'));
+                    delete_file($purchase_payment->add_receipt);
+                    $purchase_payment->delete();
                 }
-            }else{
-                return redirect()->back()->with('error', __('A debit note has been created for this invoice, so it cannot be deleted.'));
+                foreach ($purchase_products as $purchase_product) {
+                    $warehouse_qty = WarehouseProduct::where('warehouse_id', $purchase->warehouse_id)->where('product_id', $purchase_product->product_id)->first();
+                    if (!empty($warehouse_qty)) {
+                        $warehouse_qty->quantity = $warehouse_qty->quantity - $purchase_product->quantity;
+
+                        if ($warehouse_qty->quantity > 0) {
+                            $warehouse_qty->save();
+                        } else {
+                            $warehouse_qty->delete();
+                        }
+                    }
+                    $product_qty = \Workdo\ProductService\Entities\ProductService::where('id', $purchase_product->product_id)->first();
+                    if (!empty($product_qty)) {
+                        $product_qty->quantity = $product_qty->quantity - $purchase_product->quantity;
+                        $product_qty->save();
+                    }
+
+                    $purchase_product->delete();
+                }
+                if (module_is_active('CustomField')) {
+                    $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'pos')->where('sub_module', 'warehouse')->get();
+                    foreach ($customFields as $customField) {
+                        $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $purchase->id)->where('field_id', $customField->id)->first();
+                        if (!empty($value)) {
+
+                            $value->delete();
+                        }
+                    }
+                }
+                PurchaseAttachment::where('purchase_id', $purchase->id)->delete();
+
+                PurchaseProduct::where('purchase_id', '=', $purchase->id)->delete();
+
+                event(new DestroyPurchase($purchase));
+                $purchase->delete();
+
+                return redirect()->back()->with('success', __('The purchase has been deleted'));
+            } else {
+                return redirect()->back()->with('error', __('Permission denied.'));
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -735,8 +696,6 @@ class PurchaseController extends Controller
                 Purchase::warehouse_quantity('minus', $purchaseProduct->quantity, $purchaseProduct->product_id, $product->warehouse_id);
             }
 
-            event(new DestroyPurchaseProduct($request, $purchaseProduct));
-
             $purchaseProduct->delete();
 
             return redirect()->back()->with('success', __('The purchase product has been deleted'));
@@ -753,11 +712,12 @@ class PurchaseController extends Controller
             $purchase->save();
 
             event(new SentPurchase($purchase));
-            if (!empty($purchase->user_id != 0)) {
+            if (!empty($purchase->vender_id != 0)) {
                 $vender = \Workdo\Account\Entities\Vender::where('user_id', $purchase->vender_id)->first();
                 if (empty($vender)) {
-                    $vender = User::where('id', $purchase->user_id)->first();
+                    $vender = User::where('id', $purchase->vender_id)->first();
                 }
+                AccountUtility::updateUserBalance('vendor', $vender->id, $purchase->getTotal(), 'credit');
 
                 $purchase->name = !empty($vender) ? $vender->name : '';
                 $purchase->purchase = Purchase::purchaseNumberFormat($purchase->purchase_id);
@@ -830,18 +790,9 @@ class PurchaseController extends Controller
         $purchaseId = Crypt::decrypt($purchase_id);
 
         $purchase = Purchase::where('id', $purchaseId)->first();
-
         $vendor = [];
         if (module_is_active('Account')) {
-            $vendor = \Workdo\Account\Entities\Vender::where('user_id', $purchase->user_id)->where('workspace', $purchase->workspace)->first();
-        }
-        if (!empty($vendor)) {
-            $vendor->model = 'Customer';
-        } else {
-            $vendor = $purchase->user;
-            if (!empty($vendor)) {
-                $vendor->model = 'User';
-            }
+            $vendor = $purchase->vender;
         }
 
         $totalTaxPrice = 0;
@@ -957,13 +908,14 @@ class PurchaseController extends Controller
             $venders = \Workdo\Account\Entities\Vender::where('created_by', '=', creatorId())->where('workspace', getActiveWorkSpace())->get()->pluck('name', 'id');
 
             $categories = \Workdo\ProductService\Entities\Category::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
-            $accounts = BankAccount::select(
+            $accounts = \Workdo\Account\Entities\BankAccount::select(
                 '*',
-                DB::raw("CONCAT(COALESCE(bank_name, ''), ' ', COALESCE(holder_name, '')) AS name")
+                \DB::raw("CONCAT(COALESCE(bank_name, ''), ' ', COALESCE(holder_name, '')) AS name")
             )
-            ->where('workspace', getActiveWorkSpace())
-            ->get()
-            ->pluck('name', 'id');
+                ->where('created_by', creatorId())
+                ->where('workspace', getActiveWorkSpace())
+                ->get()
+                ->pluck('name', 'id');
 
             return view('purchases.payment', compact('venders', 'categories', 'accounts', 'purchase'));
         } else {
@@ -1054,7 +1006,9 @@ class PurchaseController extends Controller
             if (module_is_active('Account')) {
                 \Workdo\Account\Entities\Transaction::addTransaction($purchasePayment);
 
-                \Workdo\Account\Entities\AccountUtility::updateUserBalance('vendor', $purchase->vender_id, $request->amount, 'credit');
+                $vender_acc = \Workdo\Account\Entities\Vender::where('user_id', $purchase->vender_id)->first();
+
+                \Workdo\Account\Entities\AccountUtility::updateUserBalance('vendor', $vender_acc->id, $request->amount, 'credit');
 
                 \Workdo\Account\Entities\Transfer::bankAccountBalance($request->account_id, $request->amount, 'debit');
             }
@@ -1081,7 +1035,8 @@ class PurchaseController extends Controller
                     $smtp_error = __('E-Mail has been not sent due to SMTP configuration');
                 }
             }
-            event(new CreatePaymentPurchase($request, $purchasePayment, $purchase));
+
+            event(new CreatePaymentPurchase($request, $payment, $purchase));
             return redirect()->back()->with('success', __('Payment successfully added.') . ((isset($smtp_error)) ? '<br> <span class="text-danger">' . $smtp_error . '</span>' : ''));
         }
     }
@@ -1195,6 +1150,7 @@ class PurchaseController extends Controller
         $settings['purchase_footer_title'] = isset($company_settings['purchase_footer_title']) ? $company_settings['purchase_footer_title'] : '';
         $settings['purchase_footer_notes'] = isset($company_settings['purchase_footer_notes']) ? $company_settings['purchase_footer_notes'] : '';
         $settings['purchase_shipping_display'] = isset($company_settings['purchase_shipping_display']) ? $company_settings['purchase_shipping_display'] : '';
+        $settings['purchase_shipping_display'] = isset($company_settings['purchase_shipping_display']) ? $company_settings['purchase_shipping_display'] : '';
         $settings['purchase_qr_display'] = isset($company_settings['purchase_qr_display']) ? $company_settings['purchase_qr_display'] : '';
 
         return view('purchases.templates.' . $template, compact('purchase', 'preview', 'color', 'img', 'settings', 'vendor', 'font_color', 'customFields'));
@@ -1293,22 +1249,12 @@ class PurchaseController extends Controller
         if (!empty($purchase)) {
             $user_id = $purchase->created_by;
             $user = User::find($user_id);
+
+            $purchasePayment = PurchasePayment::where('purchase_id', $purchase->id)->first();
+            $vendor = $purchase->vender;
             $iteams = $purchase->itemswithproduct;
             $company_id = $purchase->created_by;
             $workspace_id = $purchase->workspace;
-            $purchasePayment = PurchasePayment::where('purchase_id', $purchase->id)->first();
-            $vendor = [];
-            if (module_is_active('Account')) {
-                $vendor = \Workdo\Account\Entities\Vender::where('user_id', $purchase->user_id)->where('workspace', $workspace_id)->first();
-            }
-            if (!empty($vendor)) {
-                $vendor->model = 'Customer';
-            } else {
-                $vendor = $purchase->user;
-                if (!empty($vendor)) {
-                    $vendor->model = 'User';
-                }
-            }
             return view('purchases.customer_bill', compact('purchase', 'vendor', 'iteams', 'purchasePayment', 'user', 'company_id', 'workspace_id'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
@@ -1330,13 +1276,15 @@ class PurchaseController extends Controller
             }
 
             if (module_is_active('Account')){
-                AccountUtility::updateUserBalance('vendor', $purchase->vender_id, $payment->amount, 'debit');
+                $vender_acc = \Workdo\Account\Entities\Vender::where('user_id', $purchase->vender_id)->first();
+
+                AccountUtility::updateUserBalance('vendor', $vender_acc->id, $payment->amount, 'debit');
 
                 Transfer::bankAccountBalance($payment->account_id, $payment->amount, 'credit');
 
                 Transaction::destroyTransaction($payment_id, 'Vendor');
             }
-            event(new PaymentDestroyPurchase($purchase , $payment));
+            event(new PaymentDestroyPurchase($payment));
 
             $payment->delete();
 
@@ -1349,7 +1297,6 @@ class PurchaseController extends Controller
     }
     public function vender(Request $request)
     {
-
         if (module_is_active('Account')) {
             $vender = \Workdo\Account\Entities\Vender::where('user_id', '=', $request->id)->first();
             if (empty($vender)) {

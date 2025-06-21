@@ -14,11 +14,11 @@ return new class extends Migration
     public function up()
     {
 
-        if (Schema::hasTable('vendors') && !Schema::hasColumn('vendors', 'debit_note_balance')) {
-            Schema::table('vendors', function (Blueprint $table) {
+        Schema::table('vendors', function (Blueprint $table) {
+            if (!Schema::hasColumn('vendors', 'debit_note_balance')) {
                 $table->string('debit_note_balance')->after('balance')->default('0.00');
-            });
-        }
+            }
+        });
     }
 
     /**

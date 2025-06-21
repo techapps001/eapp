@@ -13,7 +13,6 @@ class ChartOfAccountParent extends Model
         'name',
         'sub_type',
         'type',
-        'account',
         'parent',
         'workspace',
         'created_by',

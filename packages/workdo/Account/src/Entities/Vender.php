@@ -13,7 +13,7 @@ class Vender extends Model
 
     protected $fillable = [
         'id',
-        'vendor_id',
+        '   ',
         'user_id',
         'name',
         'email',

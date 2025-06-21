@@ -13,17 +13,15 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('pay_slips') && !Schema::hasColumn('pay_slips', 'company_contribution')) {
-            Schema::table('pay_slips', function (Blueprint $table) {
+        Schema::table('pay_slips', function (Blueprint $table) {
+            if (!Schema::hasColumn('pay_slips', 'company_contribution')) {
                 $table->text('company_contribution')->after('overtime')->nullable();
-            });
-        }
+            }
 
-        if (Schema::hasTable('pay_slips') && !Schema::hasColumn('pay_slips', 'tax_bracket')) {
-            Schema::table('pay_slips', function (Blueprint $table) {
+            if (!Schema::hasColumn('pay_slips', 'tax_bracket')) {
                 $table->float('tax_bracket', 30, 2)->after('company_contribution')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**
@@ -33,6 +31,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('pay_slips', function (Blueprint $table) {});
+        Schema::table('pay_slips', function (Blueprint $table) {
+
+        });
     }
 };

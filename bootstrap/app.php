@@ -58,7 +58,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     '/instamojo/invoice/*',
                     '/bookings-pay-with-paiementpro/*',
                     '/invoice-pay-with/paiementpro/',
-                    '/sslcommerz/*',
                     ] // Add your routes here
         );
     })

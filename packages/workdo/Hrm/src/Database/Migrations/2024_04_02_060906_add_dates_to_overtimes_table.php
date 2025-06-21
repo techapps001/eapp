@@ -13,23 +13,19 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('overtimes') && !Schema::hasColumn('overtimes', 'start_date')) {
-            Schema::table('overtimes', function (Blueprint $table) {
+        Schema::table('overtimes', function (Blueprint $table) {
+            if (!Schema::hasColumn('overtimes', 'start_date')) {
                 $table->date('start_date')->after('rate')->nullable();
-            });
-        }
+            }
 
-        if (Schema::hasTable('overtimes') && !Schema::hasColumn('overtimes', 'end_date')) {
-            Schema::table('overtimes', function (Blueprint $table) {
+            if (!Schema::hasColumn('overtimes', 'end_date')) {
                 $table->date('end_date')->after('start_date')->nullable();
-            });
-        }
+            }
 
-        if (Schema::hasTable('overtimes') && !Schema::hasColumn('overtimes', 'status')) {
-            Schema::table('overtimes', function (Blueprint $table) {
+            if (!Schema::hasColumn('overtimes', 'status')) {
                 $table->string('status')->after('end_date')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**
@@ -39,6 +35,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('overtimes', function (Blueprint $table) {});
+        Schema::table('overtimes', function (Blueprint $table) {
+
+        });
     }
 };

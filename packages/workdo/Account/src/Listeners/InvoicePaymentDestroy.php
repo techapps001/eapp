@@ -5,7 +5,6 @@ namespace Workdo\Account\Listeners;
 use App\Events\PaymentDestroyInvoice;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Workdo\Account\Entities\AddTransactionLine;
 use Workdo\Account\Entities\TransactionLines;
 
 class InvoicePaymentDestroy
@@ -28,12 +27,9 @@ class InvoicePaymentDestroy
      */
     public function handle(PaymentDestroyInvoice $event)
     {
-        if (module_is_active('Account')) {
+        $invoice  = $event->invoice;
+        $invoicePayment = $event->payment;
 
-            $invoice        = $event->invoice;
-            $invoicePayment = $event->payment;
-
-            AddTransactionLine::where('reference_id',$invoice->id)->where('reference_sub_id',$invoicePayment->id)->where('reference', 'Invoice Payment')->delete();
-        }
+        TransactionLines::where('reference_id',$invoice->id)->where('reference_sub_id',$invoicePayment->id)->where('reference', 'Invoice Payment')->delete();
     }
 }

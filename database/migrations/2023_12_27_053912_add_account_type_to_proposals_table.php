@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('proposals') && !Schema::hasColumn('proposals', 'account_type')) {
-            Schema::table('proposals', function (Blueprint $table) {
+
+        Schema::table('proposals', function (Blueprint $table) {
+            if (!Schema::hasColumn('proposals', 'account_type')) {
                 $table->string('account_type')->after('customer_id')->default('Accounting');
-            });
-        }
+            }
+        });
     }
 
     /**

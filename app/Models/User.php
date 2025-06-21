@@ -113,8 +113,7 @@ class User extends Authenticatable implements LaratrustUser,MustVerifyEmail,JWTS
         'gym trainer',
         'advocate',
         'case initiator',
-        'parent',
-        'apartment owner'
+        'parent'
     ];
     public  $not_emp_type = [
         'super admin',
@@ -130,8 +129,7 @@ class User extends Authenticatable implements LaratrustUser,MustVerifyEmail,JWTS
         'case initiator',
         'parent',
         'patient',
-        'student',
-        'apartment owner'
+        'student'
     ];
     public function plan()
     {

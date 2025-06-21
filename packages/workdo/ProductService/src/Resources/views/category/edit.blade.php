@@ -26,10 +26,8 @@
             {{ Form::label('color', __('Category Color'), ['class' => 'form-label']) }}
             {{ Form::color('color', null, ['class' => 'form-control jscolor', 'required' => 'required']) }}
             <p class="small">{{ __('For chart representation') }}</p>
-        </div>
-        @if(module_is_active('RestaurantMenu') && $category->type == 0)
-            @include('restaurant-menu::items.image-edit')
-        @endif
+        </div>        
+        @include('restaurant-menu::items.image-edit')
     </div>
 </div>
 <div class="modal-footer">

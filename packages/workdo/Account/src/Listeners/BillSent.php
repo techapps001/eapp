@@ -32,45 +32,52 @@ class BillSent
      */
     public function handle(SentBill $event)
     {
-        if (module_is_active('Account')) {
 
-            $bill          = $event->bill;
-            $bill_products = BillProduct::where('bill_id', $bill->id)->get();
+        $bill = $event->bill;
 
-            foreach ($bill_products as $bill_product) {
-                $product       = ProductService::find($bill_product->product_id);
-                $totalTaxPrice = 0;
-                $taxes         = AccountUtility::tax($bill_product->tax);
 
-                foreach ($taxes as $tax) {
-                    $taxPrice       = AccountUtility::taxRate($tax['rate'], $bill_product->price, $bill_product->quantity, $bill_product->discount);
-                    $totalTaxPrice += $taxPrice;
-                }
-                
-                $itemAmount = ($bill_product->price * $bill_product->quantity) - ($bill_product->discount) + $totalTaxPrice;
-                $data       = [
-                    'account_id'         => !empty($product->expense_chartaccount_id) ? $product->expense_chartaccount_id : (!empty($bill->account_id) ? $bill->account_id : ''),
-                    'transaction_type'   => 'debit',
-                    'transaction_amount' => $itemAmount,
-                    'reference'          => 'Bill',
-                    'reference_id'       => $bill->id,
-                    'reference_sub_id'   => $bill_product->id,
-                    'date'               => $bill->bill_date,
-                ];
-                AccountUtility::addTransactionLines($data);
+        // for chart of accounts data save
 
-                $account = ChartOfAccount::where('name','Accounts Payable')->where('workspace' , getActiveWorkSpace())->where('created_by' , creatorId())->first();
-                $data    = [
-                    'account_id'         => !empty($account) ? $account->id : 0,
-                    'transaction_type'   => 'credit',
-                    'transaction_amount' => $itemAmount,
-                    'reference'          => 'Bill',
-                    'reference_id'       => $bill->id,
-                    'reference_sub_id'   => $bill_product->id,
-                    'date'               => $bill->bill_date,
-                ];
-                AccountUtility::addTransactionLines($data);
+        //save for bill product data
+        $bill_products = BillProduct::where('bill_id', $bill->id)->get();
+        foreach ($bill_products as $bill_product) {
+            $product = ProductService::find($bill_product->product_id);
+            $totalTaxPrice = 0;
+            $taxes = AccountUtility::tax($bill_product->tax);
+            foreach ($taxes as $tax) {
+                $taxPrice = AccountUtility::taxRate($tax['rate'], $bill_product->price, $bill_product->quantity, $bill_product->discount);
+                $totalTaxPrice += $taxPrice;
             }
+            $itemAmount = ($bill_product->price * $bill_product->quantity) - ($bill_product->discount) + $totalTaxPrice;
+            $data1 = [
+                'account_id' => $product->expense_chartaccount_id,
+                'transaction_type' => 'Debit',
+                'transaction_amount' => $itemAmount,
+                'reference' => 'Bill',
+                'reference_id' => $bill->id,
+                'reference_sub_id' => $product->id,
+                'date' => $bill->bill_date,
+            ];
+            AccountUtility::addTransactionLines($data1);
+
+
+        }
+        //save for bill account data
+        $bill_accounts =BillAccount::where('ref_id',$bill->id)->get();
+        foreach ($bill_accounts as $bill_account)
+        {
+            $data2 = [
+                'account_id' => $bill_account->chart_account_id,
+                'transaction_type' => 'Debit',
+                'transaction_amount' => $bill_account->price,
+                'reference' => 'Bill Account',
+                'reference_id' => $bill->id,
+                'reference_sub_id' => $bill_account->id,
+                'date' => $bill->bill_date,
+            ];
+
+            AccountUtility::addTransactionLines($data2);
+
         }
     }
 }

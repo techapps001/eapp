@@ -41,7 +41,7 @@ class InvoiceBalanceTransfer
             }
             if($account)
             {
-                $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'RestaurantMenu', 'rent' , 'Fleet'];
+                $customerInvoices = ['taskly','account','cmms','cardealership','musicinstitute','rent'];
                 if(in_array($invoice->invoice_module,$customerInvoices) ){
                     AccountUtility::updateUserBalance('customer', $invoice->customer_id, $payment->amount, 'debit');
                 }
@@ -94,7 +94,7 @@ class InvoiceBalanceTransfer
             }
             if($account)
             {
-                $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'RestaurantMenu', 'rent' , 'Fleet'];
+                $customerInvoices = ['taskly','account','cmms','cardealership','musicinstitute','rent'];
 
                 if(in_array($invoice->retainer_module,$customerInvoices) ){
                     AccountUtility::updateUserBalance('customer', $invoice->customer_id, $payment->amount, 'debit');

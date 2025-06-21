@@ -364,10 +364,4 @@ class PaymentController extends Controller
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
-
-    public function description($id)
-    {
-        $payment = Payment::find($id);
-        return view('account::payment.description', compact('payment'));
-    }
 }

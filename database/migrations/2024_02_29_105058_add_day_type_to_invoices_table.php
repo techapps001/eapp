@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('invoices') && !Schema::hasColumn('invoices', 'day_type','start_date','end_date')) {
-            Schema::table('invoices', function (Blueprint $table) {
+        Schema::table('invoices', function (Blueprint $table) {
+            if (!Schema::hasColumn('invoices', 'day_type','start_date','end_date')) {
                 $table->integer('day_type')->default(1)->nullable()->after('shipping_display');
                 $table->date('start_date')->nullable()->after('day_type');
                 $table->date('end_date')->nullable()->after('start_date');
-            });
-        }
+            }
+        });
     }
 
     /**

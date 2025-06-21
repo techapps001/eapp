@@ -28,65 +28,13 @@
                     $(this).slideUp(deleteElement);
                     $(this).remove();
 
-                    $(document).on('click', '[data-repeater-delete]', function ()
-                    {
-                        var el = $(this).parent().parent();
-                        var id = $(el.find('.id')).val();
-
-                        $.ajax({
-                            url: '{{route('bill.product.destroy')}}',
-                            type: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': jQuery('#token').val()
-                            },
-                            data: {
-                                'id': id
-                            },
-                            cache: false,
-                            success: function (data) {
-                                if (data.error) {
-                                        toastrs('Error', data.error, 'error');
-                                } else {
-                                        toastrs('Success', data.success, 'success');
-                                }
-                            },
-                            error: function (data) {
-                                console.log(data);
-
-                                toastrs('Error','{{ __("something went wrong please try again") }}', 'error');
-                            },
-                        });
-                    });
-
-                    var totalItemTaxPrice = 0;
-                    var itemTaxPriceInput = $('.itemTaxPrice');
-                    for (var j = 0; j < itemTaxPriceInput.length; j++) {
-                        totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-                    }
-                    var totalItemPrice = 0;
-                    var inputs_quantity = $(".quantity");
-                    var priceInput = $('.price');
-                    for (var j = 0; j < priceInput.length; j++) {
-                        totalItemPrice += (parseFloat(priceInput[j].value) * parseFloat(inputs_quantity[j].value));
-                    }
                     var inputs = $(".amount");
                     var subTotal = 0;
                     for (var i = 0; i < inputs.length; i++) {
                         subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
                     }
-
-                    var totalItemDiscountPrice = 0;
-                    var itemDiscountPriceInput = $('.discount');
-                    for (var k = 0; k < itemDiscountPriceInput.length; k++) {
-                        if (itemDiscountPriceInput[k].value == '') {
-                            itemDiscountPriceInput[k].value = parseFloat(0);
-                        }
-                        totalItemDiscountPrice += parseFloat(itemDiscountPriceInput[k].value);
-                    }
-                    $('.subTotal').html(totalItemPrice.toFixed(2));
-                    $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-                    $('.totalAmount').html((parseFloat(subTotal)).toFixed(2));
-                    $('.totalDiscount').html(totalItemDiscountPrice.toFixed(2));
+                    $('.subTotal').html(subTotal.toFixed(2));
+                    $('.totalAmount').html(subTotal.toFixed(2));
                 }
             },
             ready: function(setIndexes) {
@@ -110,7 +58,6 @@
         var product_type = data.val();
         var selector = data;
         var itemSelect = selector.parent().parent().find('.product_id.item').attr('name');
-
         $.ajax({
             url: '{{ route('get.item') }}',
             type: 'POST',
@@ -154,8 +101,6 @@
             if (typeof value != 'undefined' && value.length != 0) {
                 value = JSON.parse(value);
                 $repeater.setList(value);
-                // Remove delete button for first row
-                $('.repeater [data-repeater-item]').first().find('[data-repeater-delete]').remove();
                 for (var i = 0; i < value.length; i++) {
                     var tr = $('#sortable-table .id[value="' + value[i].id + '"]').parent();
                     tr.find('.item').val(value[i].product_id);
@@ -333,12 +278,12 @@
 @if ($type == 'product')
     <h5 class="h4 d-inline-block font-weight-400 mb-4">{{ __('Items') }}</h5>
     <div class="card repeater" @if ($acction == 'edit') data-value='{!! json_encode($bill->items) !!}' @endif>
-        <div class="item-section p-3 pb-0">
+        <div class="item-section py-4">
             <div class="row justify-content-between align-items-center">
-                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-4">
+                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-5">
                     <a href="#" data-repeater-create="" class="btn btn-primary mr-2" data-toggle="modal"
                         data-target="#add-bank">
-                        <i class="ti ti-plus"></i> {{ __('Add Item') }}
+                        <i class="ti ti-plus"></i> {{ __('Add item') }}
                     </a>
                 </div>
             </div>
@@ -411,7 +356,7 @@
 
                             <td class="text-end amount">0.00</td>
                             <td>
-                                <a href="#" class="action-btn ms-2 float-end" data-repeater-delete="">
+                                <a href="#" class="action-btn ms-2 float-end mb-3" data-repeater-delete="">
                                     <div class="mx-3 btn btn-sm d-inline-flex align-items-center m-2 p-2 bg-danger" bis_skin_checked="1">
                                         <i class="ti ti-trash text-white" data-bs-toggle="tooltip" data-bs-original-title="Delete"></i>
                                     </div>
@@ -419,8 +364,21 @@
                             </td>
                         </tr>
                         <tr>
+                            <td class="form-group">
+                                <select name="chart_account_id" class="form-control">
+                                    @foreach ($chartAccounts as $key => $chartAccount)
+                                        <option value="{{ $key }}" class="subAccount">{{ $chartAccount}}</option>
+                                        @foreach ($subAccounts as $subAccount)
+                                            @if ($key == $subAccount['account'])
+                                                <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp; {{ $subAccount['code'] }} - {{ $subAccount['name'] }}</option>
+                                            @endif
+                                        @endforeach
+                                    @endforeach
+                                </select>
+                            </td>
+
                             <td colspan="3" class="form-group">
-                                {{ Form::textarea('description', null, ['class'=>'form-control pro_description','rows'=>'2','placeholder'=>__('Description')]) }}
+                                {{ Form::textarea('description', null, ['class'=>'form-control pro_description','rows'=>'1','placeholder'=>__('Description')]) }}
                             </td>
                             <td></td>
 
@@ -485,12 +443,12 @@
 
 
     <div class="card repeater" @if ($acction == 'edit') data-value='{!! json_encode($bill->items) !!}' @endif>
-        <div class="item-section p-3 pb-0">
+        <div class="item-section py-4">
             <div class="row justify-content-between align-items-center">
-                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-4">
+                <div class="col-md-12 d-flex align-items-center justify-content-md-end px-5">
                     <a href="#" data-repeater-create="" class="btn btn-primary tax_get mr-2" data-toggle="modal"
                         data-target="#add-bank">
-                        <i class="ti ti-plus"></i> {{ __('Add Item') }}
+                        <i class="ti ti-plus"></i> {{ __('Add item') }}
                     </a>
                 </div>
             </div>
@@ -543,7 +501,7 @@
                             </td>
                             <td class="text-end amount">0.00</td>
                             <td>
-                                <div class="action-btn ms-2 float-end" data-repeater-delete>
+                                <div class="action-btn ms-2 float-end mb-3" data-repeater-delete>
                                     <a href="#!"
                                         class="mx-3 btn btn-sm d-inline-flex align-items-center m-2 p-2 bg-danger">
                                           <i class="ti ti-trash text-white" data-bs-toggle="tooltip"

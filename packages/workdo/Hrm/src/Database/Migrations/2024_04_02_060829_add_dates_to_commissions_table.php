@@ -13,23 +13,19 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('commissions') && !Schema::hasColumn('commissions', 'start_date')) {
-            Schema::table('commissions', function (Blueprint $table) {
+        Schema::table('commissions', function (Blueprint $table) {
+            if (!Schema::hasColumn('commissions', 'start_date')) {
                 $table->date('start_date')->after('amount')->nullable();
-            });
-        }
+            }
 
-        if (Schema::hasTable('commissions') && !Schema::hasColumn('commissions', 'end_date')) {
-            Schema::table('commissions', function (Blueprint $table) {
+            if (!Schema::hasColumn('commissions', 'end_date')) {
                 $table->date('end_date')->after('start_date')->nullable();
-            });
-        }
+            }
 
-        if (Schema::hasTable('commissions') && !Schema::hasColumn('commissions', 'status')) {
-            Schema::table('commissions', function (Blueprint $table) {
+            if (!Schema::hasColumn('commissions', 'status')) {
                 $table->string('status')->after('end_date')->nullable();
-            });
-        }
+            }
+        });
     }
 
     /**
@@ -39,6 +35,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('commissions', function (Blueprint $table) {});
+        Schema::table('commissions', function (Blueprint $table) {
+
+        });
     }
 };

@@ -12,6 +12,15 @@
     @permission('product&service create')
         <div class="d-flex">
             @stack('addButtonHook')
+            @permission('product&service import')
+                <a href="#" class="btn btn-sm btn-primary me-2" data-ajax-popup="true"
+                    data-title="{{ __('Product & Service Import') }}" data-url="{{ route('product-service.file.import') }}"
+                    data-toggle="tooltip" title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
+                </a>
+            @endpermission
+            <a href="{{ route('product-service.grid') }}" class="btn btn-sm btn-primary me-2" data-bs-toggle="tooltip"
+                data-title="{{ __('Grid View') }}" title="{{ __('Grid View') }}"><i
+                    class="ti ti-layout-grid text-white"></i></a>
 
             <a href="{{ route('category.index') }}"data-size="md" class="btn btn-sm btn-primary me-2"
                 data-bs-toggle="tooltip"data-title="{{ __('Setup') }}" title="{{ __('Setup') }}"><i
@@ -21,22 +30,9 @@
                 data-bs-toggle="tooltip"data-title="{{ __(' Product Stock') }}" title="{{ __('Product Stock') }}"><i
                     class="ti ti-shopping-cart"></i></a>
 
-            @permission('product&service import')
-                <a href="#" class="btn btn-sm btn-primary me-2" data-ajax-popup="true"
-                    data-title="{{ __('Product & Service Import') }}" data-url="{{ route('product-service.file.import') }}"
-                    data-toggle="tooltip" title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
-                </a>
-            @endpermission
-
-            <a href="{{ route('product-service.grid') }}" class="btn btn-sm btn-primary me-2" data-bs-toggle="tooltip"
-                data-title="{{ __('Grid View') }}" title="{{ __('Grid View') }}"><i
-                    class="ti ti-layout-grid text-white"></i></a>
-
-            @permission('product&service create')
             <a href="{{ route('product-service.create') }}" class="btn btn-sm btn-primary btn-icon" data-bs-toggle="tooltip"
                 data-bs-placement="top" data-title="{{ __('Create New Product') }}" title="{{ __('Create') }}"><i
                     class="ti ti-plus text-white"></i></a>
-            @endpermission
 
         </div>
     @endpermission
@@ -54,14 +50,14 @@
                                     <div class="col-xl-6 col-lg-3 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box">
                                             {{ Form::label('item_type', __('Item'), ['class' => 'form-label']) }}
-                                            {{ Form::select('item_type', $product_type, isset($_GET['item_type']) ? $_GET['item_type'] : '', ['class' => 'form-control ', 'placeholder' => __('Select Item Type')]) }}
+                                            {{ Form::select('item_type', $product_type, isset($_GET['item_type']) ? $_GET['item_type'] : '', ['class' => 'form-control ', 'placeholder' => 'Select Item Type']) }}
                                         </div>
                                     </div>
 
                                     <div class="col-xl-6 col-lg-3 col-md-6 col-sm-12 col-12">
                                         <div class="btn-box">
                                             {{ Form::label('category', __('Category'), ['class' => 'form-label']) }}
-                                            {{ Form::select('category', $category, isset($_GET['category']) ? $_GET['category'] : '', ['class' => 'form-control ', 'placeholder' => __('Select Category')]) }}
+                                            {{ Form::select('category', $category, isset($_GET['category']) ? $_GET['category'] : '', ['class' => 'form-control ', 'placeholder' => 'Select Category']) }}
                                         </div>
                                     </div>
                                 </div>

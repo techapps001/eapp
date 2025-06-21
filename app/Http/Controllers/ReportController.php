@@ -98,7 +98,7 @@ class ReportController extends Controller
             }
             if(!empty($request->vendor) && module_is_active('Account'))
             {
-                $query->where('user_id', '=', $request->vendor);
+                $query->where('vender_id', '=', $request->vendor);
             }
             // else{
             //     $query->where('vender_id', '=', NULL);
@@ -206,7 +206,7 @@ class ReportController extends Controller
             }
             if(!empty($request->vendor) && module_is_active('Account'))
             {
-                $query->where('user_id', '=', $request->vendor);
+                $query->where('vender_id', '=', $request->vendor);
             }
             // else{
             //     $query->where('vender_id', '=', NULL);

@@ -91,6 +91,7 @@ class TransferController extends Controller
             $transfer->save();
 
             Transfer::bankAccountBalance($request->from_account, $request->amount, 'debit');
+
             Transfer::bankAccountBalance($request->to_account, $request->amount, 'credit');
             event(new CreateBankTransfer($request,$transfer));
 
@@ -219,22 +220,4 @@ class TransferController extends Controller
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
-
-    public function getOpeningBalance($id)
-    {
-        $account = BankAccount::where('id', $id)
-            ->where('workspace', getActiveWorkSpace())
-            ->first();
-        if ($account) {
-            return response()->json([
-                'success' => true,
-                'balance' => $account->opening_balance
-            ]);
-        }
-        return response()->json([
-            'success' => false,
-            'balance' => 0
-        ]);
-    }
-
 }

@@ -8,9 +8,9 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Workdo\Account\Entities\CreditNote;
 use App\Models\Invoice;
+use Workdo\Account\Entities\AccountUtility;
 use Workdo\Account\Entities\Customer;
 use App\Traits\CreditDebitNoteBalance;
-use Workdo\Account\Entities\CustomerCreditNotes;
 
 class CreditNoteController extends Controller
 {
@@ -35,16 +35,7 @@ class CreditNoteController extends Controller
         {
             $invoiceDue  = Invoice::where('id', $invoice_id)->first();
             $customer    = Customer::where('user_id', $invoiceDue->user_id)->first();
-
-            $creditNotes = CustomerCreditNotes::whereHas('invoices', function ($query) use ($invoiceDue) {
-                $query->where('user_id', $invoiceDue->user_id)
-                      ->where('workspace', getActiveWorkSpace());
-            })
-            ->where('status', '!=', '2')
-            ->with(['custom_customer', 'invoices'])
-            ->get()
-            ->pluck('credit_id', 'id');
-            return view('account::creditNote.create', compact('customer', 'invoice_id' , 'creditNotes'));
+            return view('account::creditNote.create', compact('customer', 'invoice_id'));
         }
         else
         {
@@ -75,6 +66,12 @@ class CreditNoteController extends Controller
             }
 
             $invoiceDue = Invoice::where('id', $invoice_id)->first();
+            $customer = Customer::where('user_id', $invoiceDue->user_id)->first();
+
+            if($request->amount > $customer->credit_note_balance)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($customer->credit_note_balance) . ' credit limit of this invoice.');
+            }
 
             if($request->amount > $invoiceDue->getDue())
             {
@@ -84,8 +81,7 @@ class CreditNoteController extends Controller
 
             $credit              = new CreditNote();
             $credit->invoice     = $invoice_id;
-            $credit->credit_note = $request->credit_note;
-            $credit->customer    = 0;
+            $credit->customer    = $customer->id;
             $credit->date        = $request->date;
             $credit->amount      = $request->amount;
             $credit->description = isset($request->description) ? $request->description : '--';
@@ -99,8 +95,9 @@ class CreditNoteController extends Controller
                 $invoiceDue->status = 3;
                 $invoiceDue->save();
             }
-            
-            $this->updateCreditNoteStatus($credit);
+
+            // store creditnote customer's table
+            $this->updateBalance('customer', $customer->id, $credit->amount, 'debit');
 
             return redirect()->back()->with('success', __('The credit note has been created successfully.'));
         }
@@ -167,6 +164,13 @@ class CreditNoteController extends Controller
             $invoiceDue = Invoice::where('id', $invoice_id)->first();
 
             $credit = CreditNote::find($creditNote_id);
+            $customer = Customer::where('user_id', $invoiceDue->user_id)->first();
+
+            if($request->amount > $customer->credit_note_balance + $credit->amount)
+            {
+                return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($customer->credit_note_balance + $credit->amount) . ' credit limit of this invoice.');
+            }
+
             if($request->amount > $invoiceDue->getDue() + $credit->amount)
             {
                 return redirect()->back()->with('error', 'Maximum ' .currency_format_with_sym($invoiceDue->getDue() + $credit->amount ) . ' credit limit of this invoice.');
@@ -181,12 +185,15 @@ class CreditNoteController extends Controller
                 $invoiceDue->save();
             }
 
+            // store creditnote customer's table
+            $this->updateBalance('customer', $customer->id, $credit->amount, 'credit');
+
             $credit->date        = $request->date;
             $credit->amount      = $request->amount;
             $credit->description = $request->description;
             $credit->save();
 
-            $this->updateCreditNoteStatus($credit);
+            $this->updateBalance('customer', $customer->id, $request->amount, 'debit');
 
             return redirect()->back()->with('success', __('The credit note details are updated successfully.'));
         }
@@ -219,7 +226,7 @@ class CreditNoteController extends Controller
                 }
                 $invoice->save();
 
-                $this->updateCreditNoteStatus($creditNote , 'delete');
+                $this->updateBalance('customer', $creditNote->customer, $creditNote->amount, 'credit');
                 $creditNote->delete();
 
                 return redirect()->back()->with('success', __('The credit note has been deleted.'));
@@ -230,13 +237,5 @@ class CreditNoteController extends Controller
         {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-    }
-
-    public function getPrice(Request $request)
-    {
-        $creditNote = CustomerCreditNotes::find($request->credit_note);
-        $price      = !empty($creditNote) ? ($creditNote->amount + $request->amount) - $creditNote->usedCreditNote() : 0;
-
-        return response()->json($price);
     }
 }

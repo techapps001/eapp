@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        if (Schema::hasTable('users') && !Schema::hasColumn('users', 'job_title'))
+        if (!Schema::hasColumn('users', 'job_title'))
         {
             Schema::table('users', function (Blueprint $table) {
                 $table->string('job_title')->nullable()->after('is_enable_login');

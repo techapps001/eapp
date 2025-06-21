@@ -23,13 +23,10 @@ class BankAccountDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rawColumn = ['chart_account_id','opening_balance' , 'payment_name'];
+        $rawColumn = ['chart_account_id','opening_balance'];
         $dataTable = (new EloquentDataTable($query))
             ->editColumn('chart_account_id', function (BankAccount $account) {
                 return $account->chart_account_name;
-            })
-            ->editColumn('payment_name', function (BankAccount $account) {
-                return !empty($account->payment_name) ? $account->payment_name : '--';
             })
             ->editColumn('opening_balance', function (BankAccount $account) {
                 return currency_format_with_sym($account->opening_balance);
@@ -178,7 +175,10 @@ class BankAccountDataTable extends DataTable
             Column::make('bank_name')->title(__('Bank')),
             Column::make('account_number')->title(__('Account Number')),
             Column::make('opening_balance')->title(__('Current Balance')),
-            Column::make('payment_name')->title(__('Payment Gateway')),
+            Column::make('contact_number')->title(__('Contact Number')),
+            Column::make('bank_branch')->title(__('Bank Branch')),
+            Column::make('swift')->title(__('SWIFT')),
+            Column::make('bank_address')->title(__('Bank Address')),
         ];
         if (\Laratrust::hasPermission('bank account edit') || \Laratrust::hasPermission('bank account delete')) {
 
@@ -187,6 +187,7 @@ class BankAccountDataTable extends DataTable
                 ->exportable(false)
                 ->printable(false)
                 ->width(60)
+                
 
             ];
 

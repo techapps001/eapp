@@ -6,7 +6,6 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
-use Workdo\Account\Entities\AccountUtility;
 use Workdo\Account\Entities\ChartOfAccountType;
 use Workdo\Account\Entities\ChartOfAccount;
 use Workdo\Account\Entities\ChartOfAccountParent;
@@ -31,7 +30,7 @@ class ChartOfAccountController extends Controller
                 $end = $request->end_date;
             } else {
                 $start = date('Y-01-01');
-                $end = date('Y-m-d');
+                $end = date('Y-m-d', strtotime('+1 day'));
             }
 
             $filter['startDateRange'] = $start;
@@ -63,7 +62,7 @@ class ChartOfAccountController extends Controller
         $account_type = [];
 
         foreach ($types as $type) {
-            $accountTypes = ChartOfAccountSubType::where('type', $type->id)->whereNotIn('name',['Accounts Receivable','Accounts Payable'])->where('created_by', '=', creatorId())->get();
+            $accountTypes = ChartOfAccountSubType::where('type', $type->id)->where('created_by', '=', creatorId())->get();
             $temp = [];
             foreach ($accountTypes as $accountType) {
                 $temp[$accountType->id] = $accountType->name;
@@ -126,7 +125,7 @@ class ChartOfAccountController extends Controller
             $account->code = $request->code;
             $account->type = $type->type;
             $account->sub_type = $request->sub_type;
-            $account->parent = $parentAccount->account ?? 0;
+            $account->parent = $parentAccount->id ?? 0;
             $account->description = $request->description;
             $account->is_enabled = isset($request->is_enabled) ? 1 : 0;
             $account->created_by = creatorId();

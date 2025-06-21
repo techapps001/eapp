@@ -57,14 +57,6 @@ use Workdo\Fleet\Entities\VehicleInvoice;
 use Workdo\ProductService\Entities\Tax;
 use Workdo\RestaurantMenu\Entities\RestaurantOrder;
 use Illuminate\Support\Facades\Validator;
-use Workdo\Account\Entities\ChartOfAccount;
-use Workdo\Account\Entities\ChartOfAccountSubType;
-use Workdo\Account\Entities\ChartOfAccountType;
-use Workdo\Account\Entities\CreditNote;
-use Workdo\Account\Entities\CustomerCreditNotes;
-use Workdo\ChildcareManagement\Entities\Parents;
-use Workdo\MusicInstitute\Entities\MusicStudent;
-use Workdo\Newspaper\Entities\AgentDetail;
 
 class InvoiceController extends Controller
 {
@@ -136,7 +128,6 @@ class InvoiceController extends Controller
                 $projects = [];
                 $taxs = [];
                 $isQuotation = false;
-                $incomeChartAccounts = [];
 
                 if (module_is_active('Account')) {
 
@@ -152,55 +143,6 @@ class InvoiceController extends Controller
                     }
 
                     $category = \Workdo\ProductService\Entities\Category::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->where('type', 1)->get()->pluck('name', 'id');
-
-                    $incomeTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                    ->where('workspace', getActiveWorkSpace())
-                    ->whereIn('name', ['Assets', 'Liabilities', 'Income'])
-                    ->get();
-
-                    foreach ($incomeTypes as $type) {
-                        $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                            ->where('created_by', '=', creatorId())
-                            ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                            ->get();
-
-                        $temp = [];
-
-                        foreach ($accountTypes as $accountType) {
-                            $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                                ->where('created_by', '=', creatorId())
-                                ->get();
-
-                            $incomeSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                            $tempData = [
-                                'account_name' => $accountType->name,
-                                'chart_of_accounts' => [],
-                                'subAccounts' => [],
-                            ];
-                            foreach ($chartOfAccounts as $chartOfAccount) {
-                                $tempData['chart_of_accounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                ];
-                            }
-
-                            foreach ($incomeSubAccounts as $chartOfAccount) {
-                                $tempData['subAccounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                    'parent'=>$chartOfAccount->parent
-                                ];
-                            }
-                            $temp[$accountType->id] = $tempData;
-                        }
-
-                        $incomeChartAccounts[$type->name] = $temp;
-                    }
                 }
                 if (module_is_active('Taskly')) {
                     if (module_is_active('ProductService')) {
@@ -267,6 +209,12 @@ class InvoiceController extends Controller
                         ->pluck('id', 'id');
                 }
 
+                $music_students = [];
+
+                if (module_is_active('MusicInstitute')) {
+                    $music_students = \Workdo\MusicInstitute\Entities\MusicStudent::where('workspace', getActiveWorkSpace())->get()->pluck('name', 'id');
+                }
+
                 $restaurants = [];
                 if (module_is_active('RestaurantMenu')) {
                     $restaurants = \Workdo\RestaurantMenu\Entities\RestaurantCustomer::where('workspace', getActiveWorkSpace())->get()->pluck('first_name', 'id');
@@ -287,7 +235,7 @@ class InvoiceController extends Controller
                     }
                 }
 
-                return view('invoice.create', compact('customers', 'invoice_number', 'projects', 'taxs', 'category', 'customerId', 'customFields', 'work_order', 'rent_type', 'students', 'sale_invoice', 'inspectionRequests', 'machineRequests', 'isQuotation', 'quotation', 'restaurants','incomeChartAccounts'));
+                return view('invoice.create', compact('customers', 'invoice_number', 'projects', 'taxs', 'category', 'customerId', 'customFields', 'work_order', 'rent_type', 'students', 'sale_invoice', 'inspectionRequests', 'machineRequests', 'music_students', 'isQuotation', 'quotation', 'restaurants'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -401,9 +349,15 @@ class InvoiceController extends Controller
                         $childCustomer['child'] = Child::find($invoice->customer_id);
                         $childCustomer['parent'] = $childCustomer['child']->parent;
                     }
-
                     $commonCustomer = [];
-                    if ($invoice->invoice_module == 'legalcase' || $invoice->invoice_module == 'sales' || $invoice->invoice_module == 'newspaper' || $invoice->invoice_module == 'Fleet') {
+                    if ($invoice->invoice_module == 'Fleet') {
+                        $user =  User::find($invoice->user_id);
+
+                        $commonCustomer['name'] = $user->name;
+                        $commonCustomer['email'] = $user->email;
+                    }
+
+                    if ($invoice->invoice_module == 'legalcase' || $invoice->invoice_module == 'sales' || $invoice->invoice_module == 'newspaper') {
                         $user = User::where('id', $invoice->user_id)->where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->first();
                         $commonCustomer['name'] = !empty($user->name) ? $user->name : '';
                         $commonCustomer['email'] = !empty($user->email) ? $user->email : '';
@@ -421,12 +375,6 @@ class InvoiceController extends Controller
                         $commonCustomer['name'] = !empty($customers->first_name) ? $customers->first_name : '';
                         $commonCustomer['email'] = !empty($customers->email) ? $customers->email : '';
                     }
-                    if ($invoice->invoice_module == 'musicinstitute')
-                    {
-                        $music_student = MusicStudent::where('id', $invoice->user_id)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
-                        $customer['name'] = !empty($music_student->name) ? $music_student->name : '';
-                        $customer['email'] = !empty($music_student->email) ? $music_student->email : '';;
-                    }
 
                     return view('invoice.view', compact('invoice', 'customer', 'iteams', 'invoicePayment', 'customFields', 'bank_transfer_payments', 'invoice_attachment', 'mobileCustomer', 'commonCustomer', 'childCustomer','company_settings'));
                 } else {
@@ -442,6 +390,7 @@ class InvoiceController extends Controller
 
     public function edit($e_id)
     {
+
         if (module_is_active('ProductService')) {
             if (Auth::user()->isAbleTo('invoice edit')) {
                 try {
@@ -457,59 +406,8 @@ class InvoiceController extends Controller
                 $category = [];
                 $projects = [];
                 $taxs = [];
-                $incomeChartAccounts = [];
-
                 if (module_is_active('Account')) {
                     $category = \Workdo\ProductService\Entities\Category::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->where('type', 1)->get()->pluck('name', 'id');
-
-                    $incomeTypes = ChartOfAccountType::where('created_by', '=', creatorId())
-                    ->where('workspace', getActiveWorkSpace())
-                    ->whereIn('name', ['Assets', 'Liabilities', 'Income'])
-                    ->get();
-
-                    foreach ($incomeTypes as $type) {
-                        $accountTypes = ChartOfAccountSubType::where('type', $type->id)
-                            ->where('created_by', '=', creatorId())
-                            ->whereNotIn('name', ['Accounts Receivable' , 'Accounts Payable'])
-                            ->get();
-
-                        $temp = [];
-
-                        foreach ($accountTypes as $accountType) {
-                            $chartOfAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '=', 0)
-                                ->where('created_by', '=', creatorId())
-                                ->get();
-
-                            $incomeSubAccounts = ChartOfAccount::where('sub_type', $accountType->id)->where('parent', '!=', 0)
-                            ->where('created_by', '=', creatorId())
-                            ->get();
-
-                            $tempData = [
-                                'account_name' => $accountType->name,
-                                'chart_of_accounts' => [],
-                                'subAccounts' => [],
-                            ];
-                            foreach ($chartOfAccounts as $chartOfAccount) {
-                                $tempData['chart_of_accounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                ];
-                            }
-
-                            foreach ($incomeSubAccounts as $chartOfAccount) {
-                                $tempData['subAccounts'][] = [
-                                    'id' => $chartOfAccount->id,
-                                    'account_number' => $chartOfAccount->account_number,
-                                    'account_name' => $chartOfAccount->name,
-                                    'parent'=>$chartOfAccount->parent
-                                ];
-                            }
-                            $temp[$accountType->id] = $tempData;
-                        }
-
-                        $incomeChartAccounts[$type->name] = $temp;
-                    }
                 }
                 if (module_is_active('Taskly')) {
                     if (module_is_active('ProductService')) {
@@ -580,7 +478,12 @@ class InvoiceController extends Controller
                         ->get()
                         ->pluck('id', 'id');
                 }
-                return view('invoice.edit', compact('customers', 'projects', 'taxs', 'invoice', 'invoice_number', 'category', 'customFields', 'work_order', 'rent_type', 'course_order', 'students', 'sale_invoice', 'inspectionRequests', 'machineRequests' , 'incomeChartAccounts'));
+                $music_students = [];
+
+                if (module_is_active('MusicInstitute')) {
+                    $music_students = \Workdo\MusicInstitute\Entities\MusicStudent::where('workspace', getActiveWorkSpace())->get()->pluck('name', 'id');
+                }
+                return view('invoice.edit', compact('customers', 'projects', 'taxs', 'invoice', 'invoice_number', 'category', 'customFields', 'work_order', 'rent_type', 'course_order', 'students', 'sale_invoice', 'inspectionRequests', 'machineRequests', 'music_students'));
             } else {
                 return response()->json(['error' => __('Permission denied.')], 401);
             }
@@ -674,9 +577,8 @@ class InvoiceController extends Controller
             $invoice                            = Invoice::where('id', $invoice_id)->first();
             $duplicateInvoice                   = new Invoice();
             $duplicateInvoice->invoice_id       = $this->invoiceNumber();
-            $duplicateInvoice->account_type     = $invoice['account_type'];
+            $duplicateInvoice->account_type      = $invoice['account_type'];
             $duplicateInvoice->customer_id      = $invoice['customer_id'];
-            $duplicateInvoice->account_id       = $invoice['account_id'];
             $duplicateInvoice->user_id          = $invoice['user_id'];
             $duplicateInvoice->issue_date       = date('Y-m-d');
             $duplicateInvoice->due_date         = $invoice['due_date'];
@@ -690,6 +592,7 @@ class InvoiceController extends Controller
             $duplicateInvoice->created_by       = $invoice['created_by'];
             $duplicateInvoice->save();
             Invoice::starting_number($duplicateInvoice->invoice_id + 1, 'invoice');
+
             if ($duplicateInvoice) {
                 $invoiceProduct = InvoiceProduct::where('invoice_id', $invoice_id)->get();
                 foreach ($invoiceProduct as $product) {
@@ -697,7 +600,6 @@ class InvoiceController extends Controller
                     $duplicateProduct->invoice_id     = $duplicateInvoice->id;
                     $duplicateProduct->product_type   = $product->product_type;
                     $duplicateProduct->product_id     = $product->product_id;
-                    $duplicateProduct->product_name   = $product->product_name;
                     $duplicateProduct->quantity       = $product->quantity;
                     $duplicateProduct->tax            = $product->tax;
                     $duplicateProduct->discount       = $product->discount;
@@ -885,33 +787,10 @@ class InvoiceController extends Controller
         }
 
         if (module_is_active('Account')) {
-            $customer = \Workdo\Account\Entities\Customer::where('user_id', $invoice->user_id)->where('workspace', $invoice->workspace)->first();
-        }
-
-        if (!empty($customer)) {
-            $customer->model = 'Customer';
+            $customer         = \Workdo\Account\Entities\Customer::where('user_id', $invoice->user_id)->first();
         } else {
-            $customer = $invoice->customer;
-            if (!empty($customer)) {
-                $customer->model = 'User';
-            }
+            $customer         = User::where('id', $invoice->user_id)->first();
         }
-
-        if ($invoice->invoice_module == 'musicinstitute')
-        {
-            $music_student = MusicStudent::where('id', $invoice->user_id)->where('workspace', $invoice->workspace)->where('created_by', $invoice->created_by)->first();
-            $customer['name'] = !empty($music_student->name) ? $music_student->name : '';
-            $customer['email'] = !empty($music_student->email) ? $music_student->email : '';;
-        }
-
-        $commonCustomer = [];
-        if ($invoice->invoice_module == 'Fleet') {
-            $user =  User::find($invoice->user_id);
-
-            $commonCustomer['name'] = $user->name;
-            $commonCustomer['email'] = $user->email;
-        }
-
         $items         = [];
         $totalTaxPrice = 0;
         $totalQuantity = 0;
@@ -953,59 +832,30 @@ class InvoiceController extends Controller
             $totalRate     += $item->price;
             $totalDiscount += $item->discount;
             if (module_is_active('ProductService')) {
-                if ($invoice->invoice_module == 'newspaper'){
-                    $taxes = \Workdo\Newspaper\Entities\NewspaperTax::tax($product->tax);
-                    $itemTaxes = [];
-                    $tax_price = 0;
-                    if (!empty($item->tax)) {
-                        foreach ($taxes as $tax) {
-                            $taxPrice      = \Workdo\Newspaper\Entities\NewspaperTax::taxRate($tax->percentage, $item->price, $item->quantity);
-                            $tax_price  += $taxPrice;
-                            $totalTaxPrice += $taxPrice;
+                $taxes = \Workdo\ProductService\Entities\Tax::tax($product->tax);
+                $itemTaxes = [];
+                $tax_price = 0;
+                if (!empty($item->tax)) {
+                    foreach ($taxes as $tax) {
+                        $taxPrice      = Invoice::taxRate($tax->rate, $item->price, $item->quantity, $item->discount);
+                        $tax_price  += $taxPrice;
+                        $totalTaxPrice += $taxPrice;
 
-                            $itemTax['name']  = $tax->name;
-                            $itemTax['rate']  = $tax->rate . '%';
-                            $itemTax['price'] = currency_format_with_sym($taxPrice, $invoice->created_by);
-                            $itemTaxes[]      = $itemTax;
+                        $itemTax['name']  = $tax->name;
+                        $itemTax['rate']  = $tax->rate . '%';
+                        $itemTax['price'] = currency_format_with_sym($taxPrice, $invoice->created_by);
+                        $itemTaxes[]      = $itemTax;
 
-                            if (array_key_exists($tax->name, $taxesData)) {
-                                $taxesData[$tax->name] = $taxesData[$tax->name] + $taxPrice;
-                            } else {
-                                $taxesData[$tax->name] = $taxPrice;
-                            }
+                        if (array_key_exists($tax->name, $taxesData)) {
+                            $taxesData[$tax->name] = $taxesData[$tax->name] + $taxPrice;
+                        } else {
+                            $taxesData[$tax->name] = $taxPrice;
                         }
-                        $item->itemTax = $itemTaxes;
-                        $item->tax_price = $tax_price;
-                    } else {
-                        $item->itemTax = [];
                     }
-                }
-                else {
-                    $taxes = \Workdo\ProductService\Entities\Tax::tax($product->tax);
-                    $itemTaxes = [];
-                    $tax_price = 0;
-                    if (!empty($item->tax)) {
-                        foreach ($taxes as $tax) {
-                            $taxPrice      = Invoice::taxRate($tax->rate, $item->price, $item->quantity, $item->discount);
-                            $tax_price  += $taxPrice;
-                            $totalTaxPrice += $taxPrice;
-
-                            $itemTax['name']  = $tax->name;
-                            $itemTax['rate']  = $tax->rate . '%';
-                            $itemTax['price'] = currency_format_with_sym($taxPrice, $invoice->created_by);
-                            $itemTaxes[]      = $itemTax;
-
-                            if (array_key_exists($tax->name, $taxesData)) {
-                                $taxesData[$tax->name] = $taxesData[$tax->name] + $taxPrice;
-                            } else {
-                                $taxesData[$tax->name] = $taxPrice;
-                            }
-                        }
-                        $item->itemTax = $itemTaxes;
-                        $item->tax_price = $tax_price;
-                    } else {
-                        $item->itemTax = [];
-                    }
+                    $item->itemTax = $itemTaxes;
+                    $item->tax_price = $tax_price;
+                } else {
+                    $item->itemTax = [];
                 }
                 $items[] = $item;
             }
@@ -1033,7 +883,13 @@ class InvoiceController extends Controller
             $img  = $company_logo;
         }
 
+        $commonCustomer = [];
+        if ($invoice->invoice_module == 'Fleet') {
+            $user =  User::find($invoice->user_id);
 
+            $commonCustomer['name'] = $user->name;
+            $commonCustomer['email'] = $user->email;
+        }
 
         if ($invoice) {
             $color      = '#' . (!empty($company_settings['invoice_color']) ? $company_settings['invoice_color'] : 'ffffff');
@@ -1061,6 +917,7 @@ class InvoiceController extends Controller
             $settings['invoice_template'] = isset($company_settings['invoice_template']) ? $company_settings['invoice_template'] : '';
             $settings['invoice_color'] = isset($company_settings['invoice_color']) ? $company_settings['invoice_color'] : '';
             $settings['invoice_qr_display'] = isset($company_settings['invoice_qr_display']) ? $company_settings['invoice_qr_display'] : '';
+
             return view('invoice.templates.' . $invoice_template, compact('invoice', 'commonCustomer','color', 'settings', 'customer', 'img', 'font_color', 'customFields', 'bank_details', 'bank_details_list'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -1083,31 +940,33 @@ class InvoiceController extends Controller
 
     public function productDestroy(Request $request)
     {
+
         if (Auth::user()->isAbleTo('invoice product delete')) {
             $invoiceProduct = InvoiceProduct::where('id', '=', $request->id)->first();
-            if($request->invoice_type != 'Fleet' || $request->invoice_type != 'cardealership' || $request->invoice_type != 'legalcase'|| $request->invoice_type != 'musicinstitute' || $request->invoice_type != 'newspaper' || $request->invoice_type != 'rent' || $request->invoice_type != 'sales'){
-                if (module_is_active('ProductService')) {
-                    Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
-                }
 
-                if (module_is_active('Account')) {
-                    //Product Stock Report
-                    $type = 'invoice';
-                    $type_id = $invoiceProduct->invoice_id;
-                    $invoice = Invoice::find($invoiceProduct->invoice_id);
-                    $description = $invoiceProduct->quantity . '  ' . __('quantity delete in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice['invoice_id']);
-                    \Workdo\Account\Entities\AccountUtility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
-                }
-
-                //Warehouse Stock Report
-                $product = ProductService::find($invoiceProduct->product_id);
-                if(!empty($product) && !empty($product->warehouse_id))
-                {
-                    Invoice::warehouse_quantity('plus',$invoiceProduct->quantity,$invoiceProduct->product_id,$product->warehouse_id);
-                }
+            if (module_is_active('ProductService')) {
+                Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
             }
+
+            if (module_is_active('Account')) {
+                //Product Stock Report
+                $type = 'invoice';
+                $type_id = $invoiceProduct->invoice_id;
+                $invoice = Invoice::find($invoiceProduct->invoice_id);
+                $description = $invoiceProduct->quantity . '  ' . __('quantity delete in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice['invoice_id']);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+            }
+
+            //Warehouse Stock Report
+            $product = ProductService::find($invoiceProduct->product_id);
+            if(!empty($product) && !empty($product->warehouse_id))
+            {
+                Invoice::warehouse_quantity('plus',$invoiceProduct->quantity,$invoiceProduct->product_id,$product->warehouse_id);
+            }
+
             // first parameter request second parameter invoice
             event(new ProductDestroyInvoice($request, $invoiceProduct));
+
 
             $invoiceProduct->delete();
 
@@ -1276,7 +1135,7 @@ class InvoiceController extends Controller
             $img = get_file($invoice_logo);
         } else {
             $img          =  $company_logo;
-        }
+        } 
         $settings['site_rtl'] = isset($company_settings['site_rtl']) ? $company_settings['site_rtl'] : '';
         $settings['company_name'] = isset($company_settings['company_name']) ? $company_settings['company_name'] : '';
         $settings['company_address'] = isset($company_settings['company_address']) ? $company_settings['company_address'] : '';
@@ -1318,26 +1177,12 @@ class InvoiceController extends Controller
     public function customer(Request $request)
     {
         $type = $request->type;
+
         if ($type == 'childcare') {
-
-            $child = Child::find($request->id);
-            $parent = Parents::find($child->parent_id);
-
-            $childrenInfo = view('childcare-management::invoice.customer_detail',compact('child','parent'))->render();
-            $nutritions = json_decode($child->nutritions);
-            $childrenData = view('childcare-management::invoice.main', compact('nutritions'))->render();
-            $response = [
-                'childrenData' => $childrenData,
-                'childrenInfo' => $childrenInfo,
-            ];
-            return $response;
-
-
+            return self::getChildDetail($request);
         } else if ($type == 'mobileservice') {
-
             $customer = MobileServiceRequest::find($request->id);
-            return view('mobile-service-management::invoice.customer_detail', compact('customer', 'type'));
-
+            return view('invoice.customer_detail', compact('customer', 'type'));
         } else if ($type == 'vehicleinspection') {
 
             $inspection_request = InspectionRequest::where('id', $request->id)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
@@ -1345,7 +1190,6 @@ class InvoiceController extends Controller
             $inspector['email'] = !empty($inspection_request->inspector_email) ? $inspection_request->inspector_email : '';
             $vehicle_details = InspectionVehicle::find($inspection_request->vehicle_id);
             return view('vehicle-inspection-management::defects-repairs.inspector_detail', compact('inspector', 'inspection_request', 'vehicle_details'));
-
         } else if ($type == 'machinerepair') {
 
             $repair_request = MachineRepairRequest::where('id', $request->id)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
@@ -1354,70 +1198,23 @@ class InvoiceController extends Controller
             $machine_details = Machine::find($repair_request->machine_id);
 
             return view('machine-repair-management::invoice.customer_detail', compact('customer', 'repair_request', 'machine_details'));
-
-        } else if ($type == 'newspaper') {
-
-            $agent_detail = AgentDetail::where('user_id', $request->id)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
-            $customer = User::where('id', $agent_detail->user_id)->where('type','=','agent')->first();
-            $customer['name'] = !empty($agent->name) ? $customer->name : '';
-            $customer['email'] = !empty($agent->email) ? $customer->email : '';
-            // $machine_details = Machine::find($agent_detail->machine_id);
-            return view('newspaper::invoice.customer_detail', compact('customer', 'agent_detail'));
-
-        } else if ($type == 'case') {
-
-                $case_initiator = User::where('id', $request->id)->where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->where('type', 'case initiator')->first();
-                $customer['name'] = !empty($case_initiator->name) ? $case_initiator->name : '';
-                $customer['email'] = !empty($case_initiator->email) ? $case_initiator->email : '';
-                return view('legal-case-management::invoice.customer_detail', compact('customer', 'case_initiator'));
-
         } else if ($type == 'course') {
 
             $courseorder = [];
-            $student_detail = Student::where('id', $request->id)->first();
             if ($request->id) {
                 $courseorder = \Workdo\LMS\Entities\CourseOrderSummary::where(['student_id' => $request->id, 'status' => 'unpaid'])->get()->pluck('order_id', 'id');
             }
-            $html = view('lms::invoice.customer_detail', compact('student_detail'))->render();
 
-            return response()->json([
-                'html' => $html,
-                'courseorder' => $courseorder,
-            ]);
-
+            return response()->json($courseorder);
         } else if ($type == 'restaurantmenu') {
-            $restaurantorder = [];
 
-            $restaurant_customer = RestaurantCustomer::where('id', $request->id)->where('workspace',getActiveWorkSpace())->where('created_by', creatorId())->first();
-
+            $restaurantOrder = [];
             if ($request->id) {
-                $restaurantorder = RestaurantOrder::where(['customer_id' => $request->id, 'status' => 3])->get()->pluck('order_id', 'id');
+                $restaurantOrder = RestaurantOrder::where(['customer_id' => $request->id, 'status' => 3])->get()->pluck('order_id', 'id');
             }
 
-            $html = view('restaurant-menu::invoice.customer_detail', compact('restaurant_customer'))->render();
-
-            return response()->json([
-                'html' => $html,
-                'restaurantorder' => $restaurantorder,
-            ]);
-
-        } else if($type == 'sales'){
-
-            $user = User::where('id', $request->id)->where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->first();
-            $customer['name'] = !empty($user->name) ? $user->name : '';
-            $customer['email'] = !empty($user->email) ? $user->email : '';
-
-            return view('sales::invoice.customer_detail', compact('customer', 'type'));
-        }
-        else if($type == 'musicinstitute') {
-
-            $music_student = MusicStudent::where('id', $request->id)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
-            $customer['name'] = !empty($music_student->name) ? $music_student->name : '';
-            $customer['email'] = !empty($music_student->email) ? $music_student->email : '';
-
-            return view('music-institute::invoice.customer_detail', compact('customer', 'type'));
-        }
-        else {
+            return response()->json($restaurantOrder);
+        } else {
 
             if (module_is_active('Account')) {
                 $customer = \Workdo\Account\Entities\Customer::where('user_id', '=', $request->id)->first();
@@ -1435,6 +1232,127 @@ class InvoiceController extends Controller
         }
     }
 
+    public function getChildDetail($request)
+    {
+        $child = Child::find($request->id);
+        if($child != null)
+        {
+            $items = [];
+            if ($request->childfee_id) {
+                $childfee = ChildFee::where('id', $request->childfee_id)->where('child_id', $child->id)->first();
+                if ($childfee) {
+
+                    $items = json_decode($childfee->items);
+                }
+            }
+
+            $parent = $child->parent;
+
+            $nutritions = json_decode($child->nutritions);
+
+            if (!empty($child->class)) {
+
+                $nutritionDetail = '';
+
+                $tableData = '<tr>
+                                        <input type="hidden" name="items[0][id]" class="form-control id">
+                                        <td width="35%" class="form-group">
+                                            <input type="text" name="items[0][name]" class="form-control" value="' . (!empty($child->class) ? $child->class->class_level : '') . '" placeholder="Item Name" required readonly>
+                                        </td>
+                                        <td width="35%" class="form-group">
+                                            <div class="input-group">
+                                                <input type="number" name="items[0][amount]" class="form-control amount" value="' . (!empty($items[0]) ? $items[0]->amount : 0) . '" placeholder="Amount" required>
+                                                <span class="input-group-text bg-transparent">' . (isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '$') . '</span>
+                                            </div>
+                                        </td>
+                                        <td width="10%">&nbsp;</td>
+                                    </tr>';
+
+
+                if (!empty($nutritions)) {
+
+                    foreach ($nutritions as $key => $nutrition) {
+                        $index = ++$key;
+                        $nutritionDetail .= '<span><b>Food Name : </b>' . $nutrition->food_name . ' (Qty : ' . $nutrition->quantity . ')</span><br>';
+                        $tableData .= '<tr>
+                                        <input type="hidden" name="items[' . $index . '][id]" class="form-control id">
+                                            <td width="35%" class="form-group">
+                                                <input type="text" name="items[' . $index . '][name]" class="form-control" value="' . $nutrition->food_name . '" placeholder="Amount" required readonly>
+                                            </td>
+                                            <td width="35%" class="form-group">
+                                                <div class="input-group">
+                                                    <input type="number" name="items[' . $index . '][amount]" class="form-control amount" value="' . (!empty($items[$index]) ? $items[$index]->amount : 0) . '" placeholder="Amount" required>
+                                                    <span class="input-group-text bg-transparent">' . (isset($company_settings['defult_currancy_symbol']) ? $company_settings['defult_currancy_symbol'] : '$') . '</span>
+                                                </div>
+                                            </td>
+                                            <td width="10%">&nbsp;</td>
+                                        </tr>';
+                    }
+                }
+
+                $html = '<div class="row">
+                            <div class="col-md-5 col-12">
+                                <h6>Child Detail</h6>
+                                <p>
+                                    <span><b>Name : </b>' . $child->first_name . ' ' . $child->last_name . '</span><br>
+                                    <span><b>Date Of Birth : </b>' . $child->dob . '</span><br>
+                                    <span><b>Gender : </b>' . $child->gender . '</span><br>
+                                    <span><b>Age : </b>' . $child->age . '</span><br>
+                                    <span><b>Class : </b>' . (!empty($child->class) ? $child->class->class_level : '') . '</span><br>
+                                </p>
+                            </div>
+                            <div class="col-md-5 col-12">
+                                <h6>Parent Detail</h6>
+                                <p>
+                                    <span><b>Name : </b>' . $parent->first_name . ' ' . $parent->last_name . '</span><br>
+                                    <span><b>Email : </b>' . $parent->email . '</span><br>
+                                    <span><b>Contact Number : </b>' . $parent->contact_number . '</span><br>
+                                    <span><b>Address : </b>' . $parent->address . '</span><br>
+                                </p>
+                            </div>
+                            <div class="col-md-2 ">
+                                <a href="#" id="remove" class="text-sm btn btn-danger"> Remove</a>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <h6>Nutrition Detail</h6>
+                                <p>
+                                    ' . $nutritionDetail . '
+                                </p>
+                            </div>
+                        </div>';
+
+                return response()->json(['status' => 'success', 'html' => $html, 'tableData' => $tableData, 'items' => $items]);
+            }
+        }
+        else
+        {
+            $html = '<div class="row">
+                            <div class="col-md-5 col-12">
+                                <h6>Child Detail</h6>
+                                <p>
+                                    <span><b>Name : </b>' . ' ' .'</span><br>
+                                    <span><b>Date Of Birth : </b>' . ' ' . '</span><br>
+                                    <span><b>Gender : </b>' . ' ' . '</span><br>
+                                    <span><b>Age : </b>' . ' ' . '</span><br>
+                                    <span><b>Class : </b>' . ' ' . '</span><br>
+                                </p>
+                            </div>
+                            <div class="col-md-5 col-12">
+                                <h6>Parent Detail</h6>
+                                <p>
+                                    <span><b>Name : </b>' . ' ' . '</span><br>
+                                    <span><b>Email : </b>' . ' ' . '</span><br>
+                                    <span><b>Contact Number : </b>' . ' ' . '</span><br>
+                                    <span><b>Address : </b>' . ' ' . '</span><br>
+                                </p>
+                            </div>
+                            <div class="col-md-2 ">
+                                <a href="#" id="remove" class="text-sm btn btn-danger"> Remove</a>
+                            </div>
+                        </div>';
+            return response()->json(['status' => 'success' ,'html' => $html]);
+        }
+    }
     public function payinvoice($invoice_id)
     {
         if (!empty($invoice_id)) {
@@ -1445,10 +1363,6 @@ class InvoiceController extends Controller
             }
 
             $invoice = Invoice::where('id', $id)->first();
-            $iteams   = $invoice->items;
-            $company_id = $invoice->created_by;
-            $workspace_id = $invoice->workspace;
-
             if (!is_null($invoice)) {
                 $items         = [];
                 $totalTaxPrice = 0;
@@ -1515,34 +1429,36 @@ class InvoiceController extends Controller
                     \App::setLocale('en');
                 }
 
+                $invoice    = Invoice::where('id', $id)->first();
+                $customer = $invoice->customer;
+                $iteams   = $invoice->items;
+
                 $company_payment_setting = [];
 
+                if (module_is_active('Account')) {
+                    $customer = \Workdo\Account\Entities\Customer::where('user_id', $invoice->user_id)->first();
+                } else {
+                    $customer = $invoice->customer;
+                }
                 if (module_is_active('CustomField')) {
                     $invoice->customField = \Workdo\CustomField\Entities\CustomField::getData($invoice, 'Base', 'Invoice');
                     $customFields             = \Workdo\CustomField\Entities\CustomField::where('workspace_id', '=', $invoice->workspace)->where('module', '=', 'Base')->where('sub_module', 'Invoice')->get();
                 } else {
                     $customFields = null;
                 }
-
-                if (module_is_active('Account')) {
-                    $customer = \Workdo\Account\Entities\Customer::where('user_id', $invoice->user_id)->where('workspace', $invoice->workspace)->first();
-                }
-
-                if (!empty($customer)) {
-                    $customer->model = 'Customer';
-                } else {
-                    $customer = $invoice->customer;
-                    if (!empty($customer)) {
-                        $customer->model = 'User';
-                    }
-                }
-
+                $company_id = $invoice->created_by;
+                $workspace_id = $invoice->workspace;
                 $mobileCustomer = [];
                 if ($invoice->invoice_module == 'mobileservice') {
                     $mobileCustomer = MobileServiceRequest::find($invoice->customer_id);
                 }
                 $commonCustomer = [];
+                if ($invoice->invoice_module == 'Fleet') {
+                    $user =  User::find($invoice->user_id);
 
+                    $commonCustomer['name'] = $user->name;
+                    $commonCustomer['email'] = $user->email;
+                }
                 if ($invoice->invoice_module == 'legalcase' || $invoice->invoice_module == 'sales' || $invoice->invoice_module == 'newspaper') {
                     $user = User::where('id', $invoice->user_id)->where('workspace_id', $invoice->workspace)->where('created_by', $invoice->created_by)->first();
                     $commonCustomer['name'] = !empty($user->name) ? $user->name : '';
@@ -1555,6 +1471,7 @@ class InvoiceController extends Controller
                 }
                 if ($invoice->invoice_module == 'lms') {
 
+
                     $store = Store::where('workspace_id', $invoice->workspace)->where('created_by', $invoice->created_by)->first();
 
                     $customers = Student::where('store_id', $store->id)->where('id', $invoice->customer_id)->first();
@@ -1565,12 +1482,6 @@ class InvoiceController extends Controller
                     $customers = RestaurantCustomer::where('id', $invoice->customer_id)->first();
                     $commonCustomer['name'] = !empty($customers->first_name) ? $customers->first_name : '';
                     $commonCustomer['email'] = !empty($customers->email) ? $customers->email : '';
-                }
-                if ($invoice->invoice_module == 'musicinstitute')
-                {
-                    $music_student = MusicStudent::where('id', $invoice->user_id)->where('workspace', $invoice->workspace)->where('created_by', $invoice->created_by)->first();
-                    $customer['name'] = !empty($music_student->name) ? $music_student->name : '';
-                    $customer['email'] = !empty($music_student->email) ? $music_student->email : '';;
                 }
                 return view('invoice.invoicepay', compact('invoice', 'iteams', 'customer', 'users', 'company_payment_setting', 'customFields', 'company_id', 'workspace_id', 'mobileCustomer', 'commonCustomer', 'childCustomer'));
             } else {
@@ -1624,11 +1535,6 @@ class InvoiceController extends Controller
             $invoicePayment                 = new InvoicePayment();
 
             if (module_is_active('Account')) {
-                $bankAccount = BankAccount::find($request->account_id);
-                if($bankAccount->chart_account_id == 0)
-                {
-                    return redirect()->back()->with('error', __('This bank account is not connect with chart of account, so please connect first.'));
-                }
                 $validator = \Validator::make(
                     $request->all(),
                     [
@@ -1661,8 +1567,8 @@ class InvoiceController extends Controller
             $invoicePayment->save();
 
             $invoice = Invoice::where('id', $invoice_id)->first();
-
             $due     = $invoice->getDue();
+            $total   = $invoice->getTotal();
             if ($invoice->status == 0) {
                 $invoice->send_date = date('Y-m-d');
                 $invoice->save();
@@ -1684,16 +1590,21 @@ class InvoiceController extends Controller
 
             if (module_is_active('Account')) {
                 $customer =  \Workdo\Account\Entities\Customer::where('id', $invoice->customer_id)->first();
-                $account = BankAccount::where(['created_by'=>$invoice->created_by,'workspace'=>$invoice->workspace])->where('id',$request->account_id)->first();
                 if (!empty($customer)) {
-                    $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'RestaurantMenu', 'rent' , 'Fleet'];
-                    if (in_array($invoice->invoice_module, $customerInvoices)) {
-                        AccountUtility::updateUserBalance('customer', $invoice->customer_id, $invoicePayment->amount, 'debit');
+                    $account = BankAccount::where(['created_by'=>$invoice->created_by,'workspace'=>$invoice->workspace])->where('id',$request->account_id)->first();
+                    if($account){
+                        $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'musicinstitute', 'rent'];
+
+                        if (in_array($invoice->invoice_module, $customerInvoices)) {
+                            AccountUtility::updateUserBalance('customer', $invoice->customer_id, $invoicePayment->amount, 'debit');
+                        }
+
+                        Transfer::bankAccountBalance($account->id, $invoicePayment->amount, 'credit');
+
+                        \Workdo\Account\Entities\Transaction::addTransaction($invoicePayment);
+
                     }
-                }
-                if($account){
-                    \Workdo\Account\Entities\Transaction::addTransaction($invoicePayment);
-                    Transfer::bankAccountBalance($account->id, $invoicePayment->amount, 'credit');
+
                 }
             }
 
@@ -1757,7 +1668,7 @@ class InvoiceController extends Controller
                 {
                     \Workdo\Account\Entities\Transaction::destroyTransaction($payment_id,'Customer');
 
-                    $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'RestaurantMenu', 'rent' , 'Fleet'];
+                    $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'musicinstitute', 'rent'];
 
                     if (in_array($invoice->invoice_module, $customerInvoices)) {
                         AccountUtility::updateUserBalance('customer', $invoice->customer_id, $payment->amount, 'credit');
@@ -1794,85 +1705,76 @@ class InvoiceController extends Controller
     public function destroy(Invoice $invoice)
     {
         if (Auth::user()->isAbleTo('invoice delete')) {
-            $customerCreditNote = CustomerCreditNotes::where('invoice',$invoice->id)->first();
+            if ($invoice->workspace == getActiveWorkSpace()) {
+                if (module_is_active('Account')) {
 
-            if(!$customerCreditNote) {
-                if ($invoice->workspace == getActiveWorkSpace()) {
-                    if (module_is_active('Account')) {
-
-                        foreach ($invoice->payments as $invoices) {
-                            if (!empty($invoices->add_receipt)) {
-                                try {
-                                    delete_file($invoices->add_receipt);
-                                } catch (\Exception $e) {
-                                }
-                            }
-                            $account = BankAccount::where(['created_by' => $invoice->created_by, 'workspace' => $invoice->workspace])->select('id')->first();
-                            $account_id = $invoices->account_id == 0 ? $account->id : $invoices->account_id;
-                            Transfer::bankAccountBalance($account_id, $invoices->amount, 'debit');
-                            InvoiceAttechment::where('invoice_id', '=', $invoice->id)->delete();
-                            $invoices->delete();
-                        }
-                        if (!empty($invoice->user_id) && $invoice->user_id != 0) {
-                            $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'RestaurantMenu', 'rent' , 'Fleet'];
-                            $customer = Customer::where('user_id', $invoice->user_id)->where('workspace', getActiveWorkSpace())->first();
-                            if (in_array($invoice->invoice_module, $customerInvoices) && !empty($customer)) {
-                                $invoiceDue = $invoice->getTotal() - $invoice->getDue();
-                                AccountUtility::updateUserBalance('customer', $customer->id, $invoiceDue, 'credit');
+                    foreach ($invoice->payments as $invoices) {
+                        if (!empty($invoices->add_receipt)) {
+                            try {
+                                delete_file($invoices->add_receipt);
+                            } catch (\Exception $e) {
                             }
                         }
+                        $account = BankAccount::where(['created_by' => $invoice->created_by, 'workspace' => $invoice->workspace])->select('id')->first();
+                        $account_id = $invoices->account_id == 0 ? $account->id : $invoices->account_id;
+                        Transfer::bankAccountBalance($account_id, $invoices->amount, 'debit');
+                        $invoices->delete();
                     }
-                    $proposal = Proposal::where('converted_invoice_id', $invoice->id)->first();
-                    if (!empty($proposal)) {
-                        $proposal->converted_invoice_id = Null;
-                        $proposal->is_convert           = 0;
-                        $proposal->save();
-                    }
+                    if (!empty($invoice->user_id) && $invoice->user_id != 0) {
+                        $customerInvoices = ['taskly', 'account', 'cmms', 'cardealership', 'musicinstitute', 'rent'];
+                        $customer = Customer::where('user_id', $invoice->user_id)->where('workspace', getActiveWorkSpace())->first();
+                        if (in_array($invoice->invoice_module, $customerInvoices) && !empty($customer)) {
 
-                    // change ProductService qty
-                    $invoiceProduct = InvoiceProduct::where('invoice_id', '=', $invoice->id)->get();
-                    foreach ($invoiceProduct as $key => $value) {
-
-                        if (module_is_active('ProductService')) {
-                            Invoice::total_quantity('plus', $value->quantity, $value->product_id);
-                        }
-                        //Warehouse Stock Report
-                        $product = ProductService::find($value->product_id);
-                        if(!empty($product) && !empty($product->warehouse_id))
-                        {
-                            Invoice::warehouse_quantity('plus',$value->quantity,$value->product_id,$product->warehouse_id);
-                        }
-
-                        $stocks = \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $value->invoice_id)->where('product_id',$value->product_id)->get();
-                        foreach($stocks as $stock)
-                        {
-                            $stock->delete();
-                        }
-                        $value->delete();
-                    }
-
-
-                    if (module_is_active('CustomField')) {
-                        $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'Base')->where('sub_module', 'Invoice')->get();
-                        foreach ($customFields as $customField) {
-                            $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $invoice->id)->where('field_id', $customField->id)->first();
-                            if (!empty($value)) {
-                                $value->delete();
-                            }
+                            AccountUtility::updateUserBalance('customer', $customer->id, $invoice->getTotal(), 'credit');
                         }
                     }
-                    // first parameter invoice
-                    event(new DestroyInvoice($invoice));
-                    $invoice->delete();
-
-                    return redirect()->route('invoice.index')->with('success', __('The invoice has been deleted'));
-                } else {
-                    return redirect()->back()->with('error', __('Permission denied.'));
                 }
-            }
-            else
-            {
-                return redirect()->back()->with('error', __('A credit note has been created for this invoice, so it cannot be deleted.'));
+                $proposal = Proposal::where('converted_invoice_id', $invoice->id)->first();
+                if (!empty($proposal)) {
+                    $proposal->converted_invoice_id = Null;
+                    $proposal->is_convert           = 0;
+                    $proposal->save();
+                }
+
+                // change ProductService qty
+                $invoiceProduct = InvoiceProduct::where('invoice_id', '=', $invoice->id)->get();
+                foreach ($invoiceProduct as $key => $value) {
+
+                    if (module_is_active('ProductService')) {
+                        Invoice::total_quantity('plus', $value->quantity, $value->product_id);
+                    }
+                    //Warehouse Stock Report
+                    $product = ProductService::find($value->product_id);
+                    if(!empty($product) && !empty($product->warehouse_id))
+                    {
+                        Invoice::warehouse_quantity('plus',$value->quantity,$value->product_id,$product->warehouse_id);
+                    }
+
+                    $stocks = \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $value->invoice_id)->where('product_id',$value->product_id)->get();
+                    foreach($stocks as $stock)
+                    {
+                        $stock->delete();
+                    }
+                    $value->delete();
+                }
+
+
+                if (module_is_active('CustomField')) {
+                    $customFields = \Workdo\CustomField\Entities\CustomField::where('module', 'Base')->where('sub_module', 'Invoice')->get();
+                    foreach ($customFields as $customField) {
+                        $value = \Workdo\CustomField\Entities\CustomFieldValue::where('record_id', '=', $invoice->id)->where('field_id', $customField->id)->first();
+                        if (!empty($value)) {
+                            $value->delete();
+                        }
+                    }
+                }
+                // first parameter invoice
+                event(new DestroyInvoice($invoice));
+                $invoice->delete();
+
+                return redirect()->route('invoice.index')->with('success', __('The invoice has been deleted'));
+            } else {
+                return redirect()->back()->with('error', __('Permission denied.'));
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -1911,7 +1813,10 @@ class InvoiceController extends Controller
             $projects = $projects->first();
             $tasks = [];
             if (!empty($projects)) {
-                $tasks = \Workdo\Taskly\Entities\Task::where('project_id', $projects->id)->get();
+                $tasks = \Workdo\Taskly\Entities\Task::where('project_id', $projects->id)->get()->pluck('title', 'id');
+                if ($acction != 'edit') {
+                    $tasks->prepend('--', '');
+                }
             }
             $returnHTML = view('taskly::invoice.main', compact('tasks', 'type', 'acction', 'invoice'))->render();
             $response = [
@@ -1957,7 +1862,7 @@ class InvoiceController extends Controller
         } elseif ($type == "course" && module_is_active('LMS')) {
             $courseorder = '';
             $courseorder = \Workdo\LMS\Entities\CourseOrderSummary::where('status', 'Unpaid')->where('id', $request->course_order)->where('workspace', getActiveWorkSpace())->where('created_by', creatorId())->first();
-            $course = \Workdo\LMS\Entities\Course::where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->get();
+            $course = \Workdo\LMS\Entities\Course::where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->get()->pluck('title', 'id');
             $returnHTML = view('lms::invoice.main', compact('courseorder', 'type', 'acction', 'invoice', 'course'))->render();
             $response = [
                 'is_success' => true,
@@ -1970,12 +1875,7 @@ class InvoiceController extends Controller
         } elseif ($type == "case" && module_is_active('LegalCaseManagement')) {
             $taxes = [];
             if (module_is_active('ProductService')) {
-                $taxes = \Workdo\ProductService\Entities\Tax::where('workspace_id', getActiveWorkSpace())->get();
-
-                $taxes = $taxes->mapWithKeys(function ($tax) {
-                    $taxNameWithRate = $tax->name . ' (' . $tax->rate . '%)';
-                    return [$tax->id => $taxNameWithRate];
-                });
+                $taxes = \Workdo\ProductService\Entities\Tax::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             }
             $taxes->prepend("Select Tax", '');
 
@@ -1993,9 +1893,8 @@ class InvoiceController extends Controller
                 $taxes = \Workdo\ProductService\Entities\Tax::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             }
             $taxes->prepend("Select Tax", '');
-            $items = \Workdo\ProductService\Entities\ProductService::where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace())->get();
-            // $items->prepend('--', 0);
-
+            $items = \Workdo\ProductService\Entities\ProductService::where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
+            $items->prepend('select', '');
             $returnHTML = view('sales::invoice.main', compact('taxes', 'acction', 'invoice', 'items', 'type'))->render();
             $response = [
                 'is_success' => true,
@@ -2073,8 +1972,9 @@ class InvoiceController extends Controller
             return response()->json($response);
         } elseif ($type == "cardealership" && module_is_active('CarDealership')) {
 
-            $dealershipProducts = DealershipProduct::where('workspace_id', getActiveWorkSpace())->get();
+            $dealershipProducts = DealershipProduct::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             $dealershipProducts_count = $dealershipProducts->count();
+            $dealershipProducts->prepend('--', '');
 
             $returnHTML = view('car-dealership::invoice.main', compact('dealershipProducts', 'dealershipProducts_count', 'acction', 'invoice'))->render();
             $response = [
@@ -2084,6 +1984,7 @@ class InvoiceController extends Controller
             ];
             return response()->json($response);
         } elseif ($type == "musicinstitute" && module_is_active('MusicInstitute')) {
+
             $product_services = \Workdo\ProductService\Entities\ProductService::where('workspace_id', getActiveWorkSpace())->where('type', 'music institute')->get()->pluck('name', 'id');
             $product_services_count = $product_services->count();
             if ($acction != 'edit') {
@@ -2106,15 +2007,6 @@ class InvoiceController extends Controller
             $transformedData = [];
             if (!empty($restaurantOrder->product)) {
                 $productData = json_decode($restaurantOrder->product, true);
-                if($acction == 'edit') {
-                    $restaurantProducts = json_decode($restaurantOrder->product, true)['products'];
-
-                    $invoiceProductIds = collect($invoice->items)->pluck('product_id')->toArray();
-
-                    $productData['products'] = array_filter($restaurantProducts, function ($product) use ($invoiceProductIds) {
-                        return in_array($product['item_id'], $invoiceProductIds);
-                    });
-                }
                 $count = 0;
                 foreach ($productData['products'] as $key => $value) {
                     $transformedData[] = $value;
@@ -2157,10 +2049,12 @@ class InvoiceController extends Controller
             return response()->json($response);
         } elseif ($type == "fleet" && module_is_active('Fleet')) {
 
-            $fleetProducts = Vehicle::where('workspace', getActiveWorkSpace())->get();
+            $fleetProducts = Vehicle::where('workspace', getActiveWorkSpace())->get()->pluck('name', 'id');
 
             $fleet_products_count = $fleetProducts->count();
-
+            if ($acction != 'edit') {
+                $fleetProducts->prepend('--', '');
+            }
             $product_type['fleet'] = 'Fleet';
 
             $returnHTML = view('fleet::invoice.main', compact('fleetProducts', 'type', 'acction', 'invoice', 'fleet_products_count', 'product_type'))->render();
@@ -2296,10 +2190,15 @@ class InvoiceController extends Controller
     {
         $customers = [];
         $label = 'Customer';
-        $note = '';
+
         if ($request->type == 'SalesAgent') {
-            $label = 'Sales Agent';
-            $customers = User::where('workspace_id', getActiveWorkSpace())->where('users.type', 'salesagent')->get()->pluck('name', 'id');
+            $customers = User::where('workspace_id', getActiveWorkSpace())
+                ->leftjoin('customers', 'users.id', '=', 'customers.user_id')
+                ->leftjoin('sales_agents', 'users.id', '=', 'sales_agents.user_id')
+                ->where('users.type', 'salesagent')
+                ->where('users.is_disable', '1')
+                ->where('sales_agents.is_agent_active', '1')
+                ->get()->pluck('name', 'id');
         }
         if ($request->type == 'Taskly' || $request->type == 'Account' || $request->type == 'RentalManagement' || $request->type == 'CMMS' || $request->type == 'MusicInstitute') {
             $customers = User::where('workspace_id', '=', getActiveWorkSpace())->where('type', 'Client')->get()->pluck('name', 'id');
@@ -2332,8 +2231,7 @@ class InvoiceController extends Controller
         }
         if ($request->type == 'ChildcareManagement') {
             $label = 'Child';
-            $customers = Child::whereNotNull('nutritions')->where('workspace', '=', getActiveWorkSpace())->where('created_by', '=', creatorId())->with('parent')->get()->pluck('first_name', 'id');
-            $note = 'test';
+            $customers = Child::where('workspace', '=', getActiveWorkSpace())->where('created_by', '=', creatorId())->with('parent')->get()->pluck('first_name', 'id');
         }
         if ($request->type == 'MobileServiceManagement') {
             $label = 'Services';
@@ -2355,15 +2253,10 @@ class InvoiceController extends Controller
         if ($request->type == 'RestaurantMenu') {
             $customers =  RestaurantCustomer::where('created_by', creatorId())->where('workspace', getActiveWorkSpace())->get()->pluck('first_name', 'id');
         }
-        if ($request->type == 'MusicInstitute') {
-            $label = 'Student';
-            $customers =  MusicStudent::where('created_by', creatorId())->where('workspace', getActiveWorkSpace())->get()->pluck('name', 'id');
-        }
 
         return response()->json([
             'customers' => $customers,
             'label' => $label,
-            'note' => $note,
         ]);
     }
 
@@ -2419,16 +2312,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -2440,7 +2333,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['item'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['item'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -2490,18 +2383,17 @@ class InvoiceController extends Controller
         $invoice->customer_id    = !empty($customer) ?  $customer->id : null;
 
         $status = Invoice::$statues;
-        $invoice->invoice_id       = $this->invoiceNumber();
-        $invoice->user_id          = $customer->user_id ?? $user->id;
-        $invoice->status           = 0;
-        $invoice->account_id       = $request->sale_chartaccount_id;
+        $invoice->invoice_id     = $this->invoiceNumber();
+        $invoice->user_id        = $customer->user_id ?? $user->id;
+        $invoice->status         = 0;
         $invoice->account_type     = $request->account_type;
         $invoice->invoice_module   = 'taskly';
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->category_id      = $request->project;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->project;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
 
@@ -2513,15 +2405,15 @@ class InvoiceController extends Controller
         }
         $project_tax = implode(',', $request->tax_project);
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
             $invoiceProduct->quantity       = 1;
             $invoiceProduct->tax            = $project_tax;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
         }
 
@@ -2579,16 +2471,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
             if (module_is_active('ProductService')) {
                 Invoice::total_quantity('minus', $invoiceProduct->quantity, $invoiceProduct->product_id);
@@ -2599,7 +2491,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -2670,16 +2562,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -2691,7 +2583,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['item'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['item'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
         }
         event(new CreateInvoice($request, $invoice));
@@ -2731,7 +2623,6 @@ class InvoiceController extends Controller
         $invoice->user_id        = $request->customer_id;
         $invoice->customer_id    = $request->customer_id;
         $invoice->status         = 0;
-        $invoice->account_id     = $request->sale_chartaccount_id;
         $invoice->account_type   = $request->account_type;
         $invoice->invoice_module = 'lms';
         $invoice->issue_date     = $request->issue_date;
@@ -2752,15 +2643,15 @@ class InvoiceController extends Controller
         }
         $project_tax = implode(',', $request->tax_project);
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
             $invoiceProduct->quantity       = 1;
             $invoiceProduct->tax            = $project_tax;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
         }
 
@@ -2789,18 +2680,18 @@ class InvoiceController extends Controller
         }
 
         $status = Invoice::$statues;
-        $invoice                   = new Invoice();
-        $invoice->invoice_id       = $this->invoiceNumber();
-        $invoice->user_id          = $request->customer_id;
-        $invoice->status           = 0;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->account_type     = $request->account_type;
-        $invoice->invoice_module   = 'legalcase';
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice                    = new Invoice();
+        $invoice->invoice_id        = $this->invoiceNumber();
+        $invoice->user_id           = $request->customer_id;
+        $invoice->status            = 0;
+        $invoice->account_type      = $request->account_type;
+        $invoice->invoice_module    = 'legalcase';
+        $invoice->issue_date        = $request->issue_date;
+        $invoice->due_date          = $request->due_date;
+
+        $invoice->invoice_template  = $request->invoice_template;
+        $invoice->workspace         = getActiveWorkSpace();
+        $invoice->created_by        = creatorId();
 
         $invoice->save();
 
@@ -2812,15 +2703,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_name   = $item['product_name'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->product_name     = $products[$i]['product_name'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
         }
 
@@ -2883,15 +2774,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -2903,7 +2794,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -2948,17 +2839,16 @@ class InvoiceController extends Controller
         }
 
 
-        $invoice->invoice_id       = $this->invoiceNumber();
-        $invoice->user_id          = $request->customer_id;
-        $invoice->status           = 0;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->invoice_module   = 'newspaper';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->invoice_id     = $this->invoiceNumber();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'newspaper';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -2968,14 +2858,14 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = isset($item['tax_id']) ? $item['tax_id'] : 0;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = isset($products[$i]['tax_id']) ? $products[$i]['tax_id'] : 0;
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
             $invoiceProduct->save();
         }
 
@@ -3001,19 +2891,18 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $messages->first());
         }
         $status = Invoice::$statues;
-        $invoice                   = new Invoice();
-        $invoice->invoice_id       = $this->invoiceNumber();
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->status           = 0;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->invoice_module   = 'childcare';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice                 = new Invoice();
+        $invoice->invoice_id     = $this->invoiceNumber();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'childcare';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -3023,12 +2912,12 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
         if (!empty($products)) {
-            foreach ($products as $item) {
+            for ($i = 0; $i < count($products); $i++) {
                 $invoiceProduct                 = new InvoiceProduct();
                 $invoiceProduct->invoice_id     = $invoice->id;
-                $invoiceProduct->product_name   = $item['name'];
-                $invoiceProduct->price          = $item['amount'];
-                $invoiceProduct->description          = $item['notes'] ?? '';
+                $invoiceProduct->product_name   = $products[$i]['name'];
+                $invoiceProduct->price          = $products[$i]['amount'];
+                $invoiceProduct->description          = $products[$i]['notes'] ?? '';
                 $invoiceProduct->tax            = 0;
 
                 $invoiceProduct->save();
@@ -3080,15 +2969,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             $updateServiceRequestStatus = MobileServiceRequest::where('id', $request->customer_id)->first();
@@ -3104,7 +2993,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['product_id'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -3167,16 +3056,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -3188,7 +3077,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['item'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['item'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -3249,16 +3138,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -3270,7 +3159,7 @@ class InvoiceController extends Controller
                 $type = 'invoice';
                 $type_id = $invoice->id;
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['item'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['item'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
 
             //Warehouse Stock Report
@@ -3320,17 +3209,16 @@ class InvoiceController extends Controller
         if (empty($customer)) {
             $user = User::find($request->customer_id);
         }
-        $invoice->invoice_id       = $this->invoiceNumber();
-        $invoice->user_id          = $request->customer_id ?? $user->id;
-        $invoice->status           = 0;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->invoice_module   = 'cardealership';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->invoice_id     = $this->invoiceNumber();
+        $invoice->user_id        = $request->customer_id ?? $user->id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'cardealership';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -3340,15 +3228,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (!empty($invoiceProduct)) {
@@ -3369,6 +3257,7 @@ class InvoiceController extends Controller
                 'issue_date' => 'required',
                 'due_date' => 'required',
                 'customer_id' => 'required',
+                'student' => 'required',
             ]
         );
         if ($validator->fails()) {
@@ -3383,6 +3272,8 @@ class InvoiceController extends Controller
         }
         $status = Invoice::$statues;
 
+
+
         $invoice                 = new Invoice();
         $customer = \Workdo\Account\Entities\Customer::where('user_id', '=', $request->customer_id)->first();
         if (empty($customer)) {
@@ -3396,6 +3287,7 @@ class InvoiceController extends Controller
         $invoice->account_type   = $request->account_type;
         $invoice->issue_date     = $request->issue_date;
         $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->student;
         $invoice->invoice_template    = $request->invoice_template;
         $invoice->workspace      = getActiveWorkSpace();
         $invoice->created_by     = creatorId();
@@ -3408,16 +3300,16 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -3430,7 +3322,7 @@ class InvoiceController extends Controller
                 $type_id = $invoice->id;
                 \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                \Workdo\Account\Entities\AccountUtility::addProductStock($item['item'], $invoiceProduct->quantity, $type, $description, $type_id);
+                \Workdo\Account\Entities\AccountUtility::addProductStock($products[$i]['item'], $invoiceProduct->quantity, $type, $description, $type_id);
             }
         }
 
@@ -3478,16 +3370,16 @@ class InvoiceController extends Controller
         }
 
         $products = $request->items;
-        foreach ($products as $item) {
+
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['item_id'];
-            $invoiceProduct->product_name     = $item['item_name'];
-            $invoiceProduct->quantity       = isset($item['quantity']) ? $item['quantity'] : '';
-            $invoiceProduct->tax            = isset($item['tax']) ? $item['tax'] : '';
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['sales_price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->product_name     = $products[$i]['item_name'];
+            $invoiceProduct->quantity       = isset($products[$i]['quantity']) ? $products[$i]['quantity'] : '';
+            $invoiceProduct->tax            = isset($products[$i]['tax']) ? $products[$i]['tax'] : '';
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['sales_price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -3527,7 +3419,6 @@ class InvoiceController extends Controller
         $invoice->invoice_id     = $this->invoiceNumber();
         $invoice->user_id        = $request->customer_id ?? $user->id;
         $invoice->status         = 0;
-        $invoice->account_id     = $request->sale_chartaccount_id;
         $invoice->invoice_module = 'Fleet';
         $invoice->account_type   = $request->account_type;
         $invoice->issue_date     = $request->issue_date;
@@ -3543,15 +3434,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
             $invoiceProduct                 = new InvoiceProduct();
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = isset($item['distance']) ? $item['distance'] : 1;
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = '1';
             $invoiceProduct->tax            = null;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = isset($item['rate']) ? $item['rate'] : 0;
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = isset($products[$i]['rate']) ? $products[$i]['rate'] : 0;
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
         }
         event(new CreateInvoice($request, $invoice));
@@ -3607,15 +3498,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
         $products = $request->items;
-        foreach ($products as $key => $item) {
 
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['item']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -3624,18 +3515,18 @@ class InvoiceController extends Controller
                     Invoice::warehouse_quantity('minus',$invoiceProduct->quantity,$invoiceProduct->product_id,$product->warehouse_id);
                 }
 
-                //Product Stock Report.
+                 //Product Stock Report.
                 if (module_is_active('Account')) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
 
-                $updatePrice = ($item['price'] * $item['quantity']) + ($item['itemTaxPrice']) - ($item['discount']); //updateUserBalance
+                $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']); //updateUserBalance
 
             } else {
                 Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
@@ -3647,32 +3538,32 @@ class InvoiceController extends Controller
                     Invoice::warehouse_quantity('plus',$invoiceProduct->quantity,$invoiceProduct->product_id,$product->warehouse_id);
                 }
 
-                //Product Stock Report.
-                if (module_is_active('Account') && isset($item['item'])) {
+                 //Product Stock Report.
+                if (module_is_active('Account') && isset($products[$i]['item'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['item'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['item'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             //inventory management (Quantity)
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
 
             //Warehouse Stock Report
@@ -3713,20 +3604,19 @@ class InvoiceController extends Controller
         if (empty($customer)) {
             $user = User::find($request->customer_id);
         }
-        // if ($request->invoice_type != $invoice->invoice_module) {
-        //     InvoiceProduct::where('invoice_id', '=', $invoice->id)->delete();
-        // }
+        if ($request->invoice_type != $invoice->invoice_module) {
+            InvoiceProduct::where('invoice_id', '=', $invoice->id)->delete();
+        }
 
         $status = Invoice::$statues;
-        $invoice->invoice_id       = $invoice->invoice_id;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->user_id          = $customer->user_id ?? $user->id;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
+        $invoice->invoice_id     = $invoice->invoice_id;
+        $invoice->user_id        = $customer->user_id ?? $user->id;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
         $invoice->account_type     = $request->account_type;
-        $invoice->invoice_module   = 'taskly';
-        $invoice->category_id      = $request->project;
-        $invoice->invoice_template = $request->invoice_template;
+        $invoice->invoice_module = 'taskly';
+        $invoice->category_id    = $request->project;
+        $invoice->invoice_template    = $request->invoice_template;
         $invoice->save();
 
         $products = $request->items;
@@ -3735,18 +3625,18 @@ class InvoiceController extends Controller
         }
 
         $project_tax = implode(',', $request->tax_project);
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
             }
-            $invoiceProduct->product_id  = $item['product_id'];
+            $invoiceProduct->product_id  = $products[$i]['product_id'];
             $invoiceProduct->quantity    = 1;
             $invoiceProduct->tax         = $project_tax;
-            $invoiceProduct->discount    = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price       = $item['price'];
-            $invoiceProduct->description = $item['description'];
+            $invoiceProduct->discount    = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price       = $products[$i]['price'];
+            $invoiceProduct->description = $products[$i]['description'];
             $invoiceProduct->save();
         }
         event(new UpdateInvoice($request, $invoice));
@@ -3798,14 +3688,14 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
         $products = $request->items;
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['product_id']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['product_id']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -3819,13 +3709,13 @@ class InvoiceController extends Controller
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
 
-                $updatePrice = ($item['price'] * $item['quantity']) + ($item['itemTaxPrice']) - ($item['discount']);
+                $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
             } else {
                 Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
@@ -3837,31 +3727,31 @@ class InvoiceController extends Controller
                 }
 
                  //Product Stock Report.
-                if (module_is_active('Account') && isset($item['product_id'])) {
+                if (module_is_active('Account') && isset($products[$i]['product_id'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['product_id'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['product_id'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
-            if (isset($item['product_id'])) {
-                $invoiceProduct->product_id = $item['product_id'];
+            if (isset($products[$i]['product_id'])) {
+                $invoiceProduct->product_id = $products[$i]['product_id'];
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             //inventory management (Quantity)
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
             //Warehouse Stock Report
             $product = ProductService::find($invoiceProduct->product_id);
@@ -3905,15 +3795,16 @@ class InvoiceController extends Controller
         if (empty($customer)) {
             $user = User::find($request->customer_id);
         }
-        $invoice->user_id          = $customer->user_id ?? $user->id;
-        $invoice->invoice_module   = 'rent';
+        $invoice->user_id        = $customer->user_id ?? $user->id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'rent';
         $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->category_id      = $request->rent_type;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->rent_type;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -3923,39 +3814,39 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['item']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
             }
             else {
                 Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
                 //Product Stock Report.
-                if (module_is_active('Account') && isset($item['item'])) {
+                if (module_is_active('Account') && isset($products[$i]['item'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['item'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['item'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->product_id     = $item['item'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->product_id     = $products[$i]['item'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
         }
         event(new UpdateInvoice($request, $invoice));
@@ -3989,17 +3880,17 @@ class InvoiceController extends Controller
         }
 
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->account_type     = $request->account_type;
-        $invoice->invoice_module   = 'lms';
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->category_id      = $request->course_order;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id    = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->account_type   = $request->account_type;
+        $invoice->invoice_module = 'lms';
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->course_order;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
 
@@ -4012,23 +3903,23 @@ class InvoiceController extends Controller
         }
         $project_tax = implode(',', $request->tax_project);
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
             }
-            if (isset($item['product_id'])) {
-                $invoiceProduct->product_id = $item['product_id'];
+            if (isset($products[$i]['product_id'])) {
+                $invoiceProduct->product_id = $products[$i]['product_id'];
             }
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
             $invoiceProduct->quantity       = 1;
             $invoiceProduct->tax            = $project_tax;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
         }
 
@@ -4055,15 +3946,16 @@ class InvoiceController extends Controller
         }
 
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->account_type     = $request->account_type;
-        $invoice->invoice_module   = 'legalcase';
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id           = $request->customer_id;
+        $invoice->status            = 0;
+        $invoice->account_type      = $request->account_type;
+        $invoice->invoice_module    = 'legalcase';
+        $invoice->issue_date        = $request->issue_date;
+        $invoice->due_date          = $request->due_date;
+
+        $invoice->invoice_template  = $request->invoice_template;
+        $invoice->workspace         = getActiveWorkSpace();
+        $invoice->created_by        = creatorId();
 
         $invoice->save();
 
@@ -4075,23 +3967,23 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
             }
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_name     = $item['product_name'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->product_name     = $products[$i]['product_name'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
         }
 
@@ -4119,15 +4011,16 @@ class InvoiceController extends Controller
         }
 
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->invoice_module   = 'sales';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->category_id      = $request->sale_invoice;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'sales';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->sale_invoice;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
         $invoice->save();
 
         $products = $request->items;
@@ -4138,14 +4031,14 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['product_id']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['product_id']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -4159,9 +4052,9 @@ class InvoiceController extends Controller
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
@@ -4176,30 +4069,30 @@ class InvoiceController extends Controller
                 }
 
                 //Product Stock Report.
-                if (module_is_active('Account') && isset($item['product_id'])) {
+                if (module_is_active('Account') && isset($products[$i]['product_id'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['product_id'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['product_id'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['product_id'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['product_id'];
             }
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
 
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
 
             //Warehouse Stock Report
@@ -4232,15 +4125,15 @@ class InvoiceController extends Controller
         }
 
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->invoice_module   = 'newspaper';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'newspaper';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
         $invoice->save();
 
         $products = $request->items;
@@ -4251,22 +4144,22 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
             }
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['product_id'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['product_id'];
             }
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = isset($item['tax_id']) ? $item['tax_id'] : 0;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = isset($products[$i]['tax_id']) ? $products[$i]['tax_id'] : 0;
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
             $invoiceProduct->save();
         }
 
@@ -4292,16 +4185,16 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $messages->first());
         }
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->invoice_module   = 'childcare';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'childcare';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -4310,17 +4203,17 @@ class InvoiceController extends Controller
         if (module_is_active('CustomField')) {
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
             }
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_name   = $item['name'];
-            $invoiceProduct->price          = $item['amount'];
-            $invoiceProduct->description          = $item['notes'] ?? '';
+            $invoiceProduct->product_name   = $products[$i]['name'];
+            $invoiceProduct->price          = $products[$i]['amount'];
+            $invoiceProduct->description          = $products[$i]['notes'] ?? '';
             $invoiceProduct->tax            = 0;
 
             $invoiceProduct->save();
@@ -4347,16 +4240,17 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $messages->first());
         }
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->invoice_module   = 'mobileservice';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->category_id      = $request->repair_charge;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'mobileservice';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->category_id    = $request->repair_charge;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -4365,14 +4259,14 @@ class InvoiceController extends Controller
         if (module_is_active('CustomField')) {
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['product_id']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['product_id']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -4386,9 +4280,9 @@ class InvoiceController extends Controller
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
@@ -4403,28 +4297,28 @@ class InvoiceController extends Controller
                 }
 
                 //Product Stock Report.
-                if (module_is_active('Account') && isset($item['product_id'])) {
+                if (module_is_active('Account') && isset($products[$i]['product_id'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['product_id'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['product_id'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['product_id'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['product_id'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
             $invoiceProduct->invoice_id     = $invoice->id;
-            $invoiceProduct->product_id     = $item['product_id'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_id     = $products[$i]['product_id'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
 
             //Warehouse Stock Report
@@ -4462,16 +4356,17 @@ class InvoiceController extends Controller
             }
         }
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->invoice_module   = 'vehicleinspection';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->category_id      = $request->service_charge;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'vehicleinspection';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->category_id    = $request->service_charge;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -4481,15 +4376,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
 
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['item']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -4503,9 +4398,9 @@ class InvoiceController extends Controller
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             } else {
@@ -4519,30 +4414,30 @@ class InvoiceController extends Controller
                 }
 
                  //Product Stock Report.
-                if (module_is_active('Account') && isset($item['item'])) {
+                if (module_is_active('Account') && isset($products[$i]['item'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['item'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['item'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
 
             //Warehouse Stock Report
@@ -4580,16 +4475,17 @@ class InvoiceController extends Controller
             }
         }
         $status = Invoice::$statues;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->invoice_module   = 'machinerepair';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->category_id      = $request->service_charge;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->user_id        = $request->customer_id;
+        $invoice->customer_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'machinerepair';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->category_id    = $request->service_charge;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -4599,15 +4495,15 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
 
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['item']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
 
                 //Warehouse Stock Report
                 $product = ProductService::find($invoiceProduct->product_id);
@@ -4621,9 +4517,9 @@ class InvoiceController extends Controller
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             } else {
@@ -4637,31 +4533,31 @@ class InvoiceController extends Controller
                 }
 
                 //Product Stock Report.
-                if (module_is_active('Account') && isset($item['item'])) {
+                if (module_is_active('Account') && isset($products[$i]['item'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['item'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['item'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             //inventory management (Quantity)
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
 
             //Warehouse Stock Report
@@ -4698,17 +4594,17 @@ class InvoiceController extends Controller
         if (empty($customer)) {
             $user = User::find($request->customer_id);
         }
-        $invoice->customer_id      = !empty($customer) ?  $customer->id : null;
-        $invoice->user_id          = $request->customer_id ?? $user->id;
-        $invoice->invoice_module   = 'cardealership';
-        $invoice->account_id       = $request->sale_chartaccount_id;
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->category_id      = $request->service_charge;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->customer_id    = !empty($customer) ?  $customer->id : null;
+        $invoice->user_id        = $request->customer_id ?? $user->id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'cardealership';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->category_id    = $request->service_charge;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
         $products = $request->items;
@@ -4718,30 +4614,31 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
+        for ($i = 0; $i < count($products); $i++) {
 
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id    = $invoice->id;
-                CarDealershipUtility::total_quantity('minus', $item['quantity'], $item['item']);
-                $updatePrice = ($item['price'] * $item['quantity']) + ($item['itemTaxPrice']) - ($item['discount']);
+                CarDealershipUtility::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
+                $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
             } else {
                 CarDealershipUtility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
             }
 
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
-            $invoiceProduct->quantity      = $item['quantity'];
-            $invoiceProduct->tax           = $item['tax'];
-            $invoiceProduct->discount      = $item['discount'];
-            $invoiceProduct->price         = $item['price'];
-            $invoiceProduct->description   = str_replace("'", "", $item['description']);
+            $invoiceProduct->quantity      = $products[$i]['quantity'];
+            $invoiceProduct->tax           = $products[$i]['tax'];
+            $invoiceProduct->discount      = $products[$i]['discount'];
+            $invoiceProduct->price         = $products[$i]['price'];
+            $invoiceProduct->description   = str_replace("'", "", $products[$i]['description']);
             $invoiceProduct->save();
 
-            if ($item['id'] > 0) {
-                CarDealershipUtility::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                CarDealershipUtility::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
         }
 
@@ -4772,7 +4669,7 @@ class InvoiceController extends Controller
         }
         $invoice->customer_id    = !empty($customer) ?  $customer->id : null;
         $invoice->user_id        = $request->customer_id ?? $user->id;
-        $invoice->account_id     = $request->sale_chartaccount_id;
+        $invoice->status         = 0;
         $invoice->invoice_module = 'Fleet';
         $invoice->account_type   = $request->account_type;
         $invoice->issue_date     = $request->issue_date;
@@ -4789,20 +4686,20 @@ class InvoiceController extends Controller
             \Workdo\CustomField\Entities\CustomField::saveData($invoice, $request->customField);
         }
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id    = $invoice->id;
             }
-            if (isset($item['product_id'])) {
-                $invoiceProduct->product_id = $item['product_id'];
+            if (isset($products[$i]['product_id'])) {
+                $invoiceProduct->product_id = $products[$i]['product_id'];
             }
-            $invoiceProduct->quantity      = isset($item['distance']) ? $item['distance'] : 1;
-            $invoiceProduct->tax           = $item['tax'];
+            $invoiceProduct->quantity      = $products[$i]['quantity'];
+            $invoiceProduct->tax           = $products[$i]['tax'];
             $invoiceProduct->discount      = 0;
-            $invoiceProduct->price         = $item['rate'];
-            $invoiceProduct->description   = str_replace("'", "", $item['description']);
+            $invoiceProduct->price         = $products[$i]['rate'];
+            $invoiceProduct->description   = str_replace("'", "", $products[$i]['description']);
 
             $invoiceProduct->save();
         }
@@ -4827,16 +4724,17 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $messages->first());
         }
 
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->user_id          = $request->customer_id;
-        $invoice->invoice_module   = 'RestaurantMenu';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->category_id      = $request->restaurant_order;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $invoice->customer_id    = $request->customer_id;
+        $invoice->user_id        = $request->customer_id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'RestaurantMenu';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->category_id    = $request->restaurant_order;
+        $invoice->invoice_template   = $request->invoice_template;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
         $invoice->save();
 
         Invoice::starting_number($invoice->invoice_id + 1, 'invoice');
@@ -4847,19 +4745,19 @@ class InvoiceController extends Controller
         $products = $request->items;
         $project_tax = implode(',', $request->tax_project);
 
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
             }
-            $invoiceProduct->product_name   = $item['item_name'];
-            $invoiceProduct->quantity       = isset($item['quantity']) ? $item['quantity'] : '';
-            $invoiceProduct->tax            = isset($item['tax']) ? $item['tax'] : '';;
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['sales_price'];
-            $invoiceProduct->description    = $item['description'];
+            $invoiceProduct->product_name   = $products[$i]['item_name'];
+            $invoiceProduct->quantity       = isset($products[$i]['quantity']) ? $products[$i]['quantity'] : '';
+            $invoiceProduct->tax            = $project_tax;
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['sales_price'];
+            $invoiceProduct->description    = $products[$i]['description'];
             $invoiceProduct->save();
 
             if (module_is_active('ProductService')) {
@@ -4879,6 +4777,7 @@ class InvoiceController extends Controller
                 'customer_id' => 'required',
                 'issue_date' => 'required',
                 'due_date' => 'required',
+                'student' => 'required',
                 'items' => 'required',
             ]
         );
@@ -4897,16 +4796,18 @@ class InvoiceController extends Controller
             $user = User::find($request->customer_id);
         }
         $status = Invoice::$statues;
-        $customer                  = \Workdo\Account\Entities\Customer::where('user_id', '=', $request->customer_id)->first();
-        $invoice->customer_id      = !empty($customer) ?  $customer->id : null;
-        $invoice->user_id          = $request->customer_id ?? $user->id;
-        $invoice->invoice_module   = 'musicinstitute';
-        $invoice->account_type     = $request->account_type;
-        $invoice->issue_date       = $request->issue_date;
-        $invoice->due_date         = $request->due_date;
-        $invoice->invoice_template = $request->invoice_template;
-        $invoice->workspace        = getActiveWorkSpace();
-        $invoice->created_by       = creatorId();
+        $customer = \Workdo\Account\Entities\Customer::where('user_id', '=', $request->customer_id)->first();
+        $invoice->customer_id    = !empty($customer) ?  $customer->id : null;
+        $invoice->user_id        = $request->customer_id ?? $user->id;
+        $invoice->status         = 0;
+        $invoice->invoice_module = 'musicinstitute';
+        $invoice->account_type   = $request->account_type;
+        $invoice->issue_date     = $request->issue_date;
+        $invoice->due_date       = $request->due_date;
+        $invoice->invoice_template    = $request->invoice_template;
+        $invoice->category_id    = $request->student;
+        $invoice->workspace      = getActiveWorkSpace();
+        $invoice->created_by     = creatorId();
 
         $invoice->save();
 
@@ -4917,56 +4818,56 @@ class InvoiceController extends Controller
         }
 
         $products = $request->items;
-        foreach ($products as $item) {
-            $invoiceProduct = InvoiceProduct::find($item['id']);
+        for ($i = 0; $i < count($products); $i++) {
+            $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
 
             if ($invoiceProduct == null) {
                 $invoiceProduct             = new InvoiceProduct();
                 $invoiceProduct->invoice_id = $invoice->id;
 
-                Invoice::total_quantity('minus', $item['quantity'], $item['item']);
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
 
                 //Product Stock Report.
                 if (module_is_active('Account')) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
 
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
 
-                $updatePrice = ($item['price'] * $item['quantity']) + ($item['itemTaxPrice']) - ($item['discount']);
+                $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
             } else {
                 Invoice::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
                 //Product Stock Report.
-                if (module_is_active('Account') && isset($item['item'])) {
+                if (module_is_active('Account') && isset($products[$i]['item'])) {
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$item['item'])->delete();
-                    $description = $item['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
-                    if (!empty($item['id'])) {
-                        Invoice::addProductStock($item['item'], $item['quantity'], $type, $description, $type_id);
+                    \Workdo\Account\Entities\StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id',$products[$i]['item'])->delete();
+                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . Invoice::invoiceNumberFormat($invoice->invoice_id);
+                    if (!empty($products[$i]['id'])) {
+                        Invoice::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
                     }
                 }
             }
 
-            if (isset($item['item'])) {
-                $invoiceProduct->product_id = $item['item'];
+            if (isset($products[$i]['item'])) {
+                $invoiceProduct->product_id = $products[$i]['item'];
             }
-            $invoiceProduct->product_type   = $item['product_type'];
-            $invoiceProduct->quantity       = $item['quantity'];
-            $invoiceProduct->tax            = $item['tax'];
-            $invoiceProduct->discount       = isset($item['discount']) ? $item['discount'] : 0;
-            $invoiceProduct->price          = $item['price'];
-            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $item['description']);
+            $invoiceProduct->product_type   = $products[$i]['product_type'];
+            $invoiceProduct->quantity       = $products[$i]['quantity'];
+            $invoiceProduct->tax            = $products[$i]['tax'];
+            $invoiceProduct->discount       = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+            $invoiceProduct->price          = $products[$i]['price'];
+            $invoiceProduct->description    = str_replace(array('\'', '"', '`', '{', "\n"), ' ', $products[$i]['description']);
             $invoiceProduct->save();
 
             //inventory management (Quantity)
-            if ($item['id'] > 0) {
-                Invoice::total_quantity('minus', $item['quantity'], $invoiceProduct->product_id);
+            if ($products[$i]['id'] > 0) {
+                Invoice::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
             }
         }
         event(new UpdateInvoice($request, $invoice));
@@ -4975,26 +4876,24 @@ class InvoiceController extends Controller
     }
     public function getInvoicItemeDetail(Request $request)
     {
-        $items       = InvoiceProduct::where('invoice_id', $request->invoice_id)->where('product_id', $request->product_id)->first();
-        $newspaper   = Newspaper::with(['Tax', 'Varient'])->where('id', $request->product_id)->first();
-        $tax         = $newspaper->Tax ?? '';
+        $newspaper = Newspaper::with('Tax')->where('id',$request->product_id)->first();
+        $tax       = $newspaper->Tax ?? '';
         if($tax)
         {
-            $totaltax  = ($newspaper->seles_price * $tax->percentage) / 100;
+            $totaltax  = ($newspaper->price * $tax->percentage) / 100;
         }else
         {
-            $totaltax  = $newspaper->seles_price;
+            $totaltax  = $newspaper->price;
         }
-        $quantity  = 1;
-        $Tax       = $totaltax * $quantity;
-        $total     = ($newspaper->seles_price * $quantity) + $Tax;
+
+        $Tax       = $totaltax * $request->quantity;
+        $total     = ($newspaper->price * $request->quantity) + $Tax;
 
         return response()->json([
             'newspaper' => $newspaper->toArray() ?? '',
-            'varient'   => $newspaper->Varient->toArray() ?? '',
-            'tax'       => $tax ? $tax->toArray() : '', // Convert only if $tax is an object
-            'total'     => $total ?? '',
-            'items'     => $items
+            'varient' => $newspaper->Varient->toArray() ?? '',
+             'tax' => $tax ? $tax->toArray() : '', // Convert only if $tax is an object
+            'total' => $total ?? '',
         ]);
     }
 

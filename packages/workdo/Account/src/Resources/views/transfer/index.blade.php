@@ -89,27 +89,4 @@
 @push('scripts')
     @include('layouts.includes.datatable-js')
     {{ $dataTable->scripts() }}
-
-    <script>
-        $(document).on('change', '#from_account', function() {
-            var account_id = $(this).val();
-            $.ajax({
-                type: 'GET',
-                url: "{{ url('bank-transfer/get-opening-balance') }}/" + account_id,
-                success: function(response) {
-                    if (response.success) {
-                        $('.bank_amount').val(response.balance);
-                        $('.bank_amount').attr('max',response.balance);
-                    } else {
-                        $('.bank_amount').val(0);
-                        toastrs('Error', 'Opening balance not found!', 'error');
-                    }
-                },
-                error: function() {
-                    $('.bank_amount').val(0);
-                    toastrs('Error', 'Something went wrong. Please try again!', 'error');
-                }
-            });
-        });
-    </script>
 @endpush

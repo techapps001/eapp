@@ -7,7 +7,6 @@
             <table class="table mb-0 pc-dt-simple" id="credir-note">
                 <thead>
                     <tr>
-                        <th class="text-dark">{{ __('Credit Note') }}</th>
                         <th class="text-dark">{{ __('Date') }}</th>
                         <th class="text-dark" class="">{{ __('Amount') }}</th>
                         <th class="text-dark" class="">{{ __('Description') }}</th>
@@ -18,7 +17,6 @@
                 </thead>
                 @forelse($invoice->creditNote as $key =>$creditNote)
                     <tr>
-                        <td><a href="#" class="btn btn-outline-primary">{{ !empty($creditNote->creditNote) ? \Workdo\Account\Entities\CustomerCreditNotes::creditNumberFormat($creditNote->creditNote->credit_id) : '-' }}</a></td>
                         <td>{{ company_date_formate($creditNote->date) }}</td>
                         <td class="">{{ currency_format_with_sym($creditNote->amount) }}</td>
                         <td class="">{{ $creditNote->description }}</td>

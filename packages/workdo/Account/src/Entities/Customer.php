@@ -37,8 +37,7 @@ class Customer extends Model
         'balance',
         'workspace',
         'created_by',
-        'remember_token',
-        'credit_note_balance'
+        'remember_token'
     ];
 
 
