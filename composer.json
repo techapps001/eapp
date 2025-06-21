@@ -28,6 +28,7 @@
         "lab404/laravel-impersonate": "^1.7",
         "laravel/cashier-paddle": "^1.9",
         "laravel/framework": "^11.9",
+        "laravel/passport": "^12.4",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.15",
         "laravel/tinker": "^2.9",
